@@ -1,0 +1,357 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<title>Epics & Stories — Bahria Town Karachi Home-Services Marketplace</title>
+<style>
+@page { size: A4; margin: 20mm 18mm; }
+* { box-sizing: border-box; }
+body { font-family: 'Segoe UI', Calibri, Arial, sans-serif; font-size: 10.5pt; line-height: 1.5; color: #1a1a1a; }
+h1 { font-size: 22pt; color: #0f4c5c; border-bottom: 3px solid #0f4c5c; padding-bottom: 6px; margin-top: 0; }
+h2 { font-size: 15pt; color: #0f4c5c; margin-top: 22px; border-bottom: 1px solid #d0dadd; padding-bottom: 3px; }
+h3 { font-size: 12pt; color: #14606f; margin-top: 14px; }
+h4 { font-size: 10.5pt; color: #333; margin-top: 12px; margin-bottom: 4px; background: #f0f5f6; padding: 3px 8px; border-left: 3px solid #14606f; }
+p { margin: 5px 0; }
+ul, ol { margin: 5px 0; padding-left: 22px; }
+li { margin: 2px 0; }
+strong { color: #0a0a0a; }
+em { color: #444; }
+code { font-family: 'Consolas','Courier New',monospace; background: #eef2f3; padding: 1px 5px; border-radius: 3px; font-size: 9.5pt; }
+blockquote { border-left: 4px solid #9ec5cd; background: #f6fafb; margin: 8px 0; padding: 6px 14px; color: #2a2a2a; }
+table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; }
+th, td { border: 1px solid #cdd8da; padding: 5px 8px; text-align: left; vertical-align: top; }
+th { background: #0f4c5c; color: #fff; }
+tr:nth-child(even) td { background: #f6fafb; }
+hr { border: none; border-top: 1px solid #d0dadd; margin: 16px 0; }
+.cover { color:#666; font-size:9.5pt; margin-bottom:18px; }
+</style></head><body>
+<div class="cover">Epic & Story Breakdown &middot; Status: Complete &middot; bahria-tenders &middot; 2026-06-07</div>
+<h1>Epics &amp; Stories — Bahria Town Karachi Home-Services Marketplace</h1>
+<h1>bahria-tenders - Epic Breakdown</h1>
+<h2>Overview</h2>
+<p>This document provides the complete epic and story breakdown for the Bahria Town Karachi home-services marketplace, decomposing the requirements from the PRD and Architecture (no separate UX doc — Bubble supplies the UI) into implementable stories. Epics map to the architecture's validation-first build order (Phase 0 concierge → Phase 1 Foundation → Phase 2 demand loop → Phase 3 trust loop → Phase 4 deferred machinery).</p>
+<h2>Requirements Inventory</h2>
+<h3>Functional Requirements</h3>
+<p>FR1: Provider sign-up — register with phone (OTP), name, CNIC number, selfie, one+ Trades, primary Precinct; profile created in Pending state.
+FR2: Identity verification gate — mark Provider Verified/Pending; selfie must visibly match CNIC + founder vetting; only Verified Providers can be awarded Jobs.
+FR3: Public provider profile (humanized accountability) — show reputation in two layers: glance (rating + job count + positive trust line) and detail (honest dispute breakdown, provider reply, Adab sub-scores); deliberate new-provider zero-state.
+FR4: Persistent reputation record — permanent, cumulative, non-resettable; CNIC-unique accounts block reputation reset.
+FR5: Neighbor social proof — anonymous/aggregate precinct-level usage count ("used by N homes in your precinct"); never names in v1.
+FR6: Post a job — Resident posts Trade + description + Precinct; Job enters Open, visible to Verified matching Providers.
+FR7: Provider job discovery — Verified Provider sees Open Jobs matching their Trade(s)/area; exact address shared only after award.
+FR8: Submit a bid — Verified Provider responds with a single price + optional note; one active Bid per Job.
+FR9: Compare bids — Resident views all Bids with price + reputation + distance + social proof; not default-sorted by cheapest.
+FR10: Award the job — Resident awards to one Provider (→ Awarded); Job closes to bids; contacts shared.
+FR11: Offline completion — job execution + payment happen offline (cash); no in-app job payment.
+FR12: Mark job completed — Resident marks an Awarded Job Completed to enable rating.
+FR13: Rate the result — Resident gives overall Rating (e.g. 1–5) + optional review; updates cumulative reputation.
+FR14: Adab score — Resident rates Respect, Cleanup, Punctuality; stored/displayed distinctly from overall Rating.
+FR15: Raise a dispute — Resident flags a Completed Job with a reason → Pending Review (not public); notifies founder + provider.
+FR16: Founder review &amp; legitimacy judgment — founder records outcome (Legitimate–Remedied / Legitimate–Unresolved / Not Upheld); only Legitimate outcomes affect public reputation.
+FR17: Subscription gating with free trial — first 2 months free; after trial, active Subscription required to submit new Bids.
+FR18: Subscription payment &amp; status — record/track Subscription status + renewal; manual collection in v1.
+FR19: Provider availability signal — Available/Unavailable toggle with auto-expiry after inactivity + per-job accept/decline.
+FR20: Broadcast &amp; provider notification — on posting, push + SMS alert to all Verified, Available matching Providers.
+FR21: Supply-aware expectation setting — show honest expectation (who's online; response-time only once data exists; plain "no one online" state).
+FR22: Empty-state capture, resident notification &amp; concierge backstop — leave-and-notify when empty; founder alerted to manually recruit/assign on no-bid Jobs.
+FR23: Provider right to respond — Provider submits their side of a Dispute before any reputation impact.
+FR24: Pattern weighting — repeated Legitimate Disputes weigh more than a single one.
+FR25: Resident standing (anti-abuse) — repeated Not-Upheld disputes lower the Resident's own standing.</p>
+<h3>NonFunctional Requirements</h3>
+<p>NFR1: Reputation integrity — reputation is permanent/cumulative/non-resettable; all aggregate writes server-side (Bubble backend workflows) with reputation fields non-client-writable; raw components stored + admin recompute button; CNIC-unique accounts.
+NFR2: Identity &amp; data privacy — CNIC number + selfie are admin+owner only, never public; private-file storage (incognito-403 test); delete CNIC/selfie image after verification (retain hash/last-4); deny-by-default privacy rules; split Provider (public) / Provider Private (sensitive) data types.
+NFR3: Platform &amp; feasibility — built solo, non-technical, on Bubble (no-code); real-time intentionally degraded to periodic refresh + push/SMS; no GPS/maps (precinct-based); no 3D/face-matching in v1.
+NFR4: Cost &amp; sustainability — running costs covered by Subscription revenue; avoid per-job platform cost (no job payment processing) in v1.
+NFR5: Operational — verification, dispute adjudication, and the concierge backstop are founder-operated manual processes in v1.
+NFR6: Localization &amp; accessibility (Urdu/English, low-tech users) — Western Arabic numerals app-wide; currency reads "Rs 1,500"; status labels paired with fixed Urdu translations; icon + text (never icon alone); generous tap targets; reassuring empty states; calm "panic-moment" notification copy.</p>
+<h3>Additional Requirements</h3>
+<p>(Architecture-derived — these shape Epic 1/Foundation and cross-cutting setup)</p>
+<ul>
+<li><strong>Platform setup ("starter"):</strong> create the Bubble app on the <strong>Web + Mobile</strong> plan; confirm the plan supports <strong>API Workflows</strong> (server-side reputation/money writes) and <strong>point-in-time restore</strong>. This is the first foundation story.</li>
+<li><strong>Data model:</strong> Bubble data types — User (role), Provider (public), Provider Private (CNIC/selfie/raw verification), Resident Profile (precinct, standing), Job, Bid, Rating, Dispute, Notification; Trade &amp; Precinct as Option Sets (slug + display); reputation stored as raw components (<code>rating_sum</code>, <code>rating_count</code>, dispute counts) + cached aggregate.</li>
+<li><strong>Per-role privacy rules</strong> (Resident / Provider / Admin), deny-by-default; Provider Private admin+owner only.</li>
+<li><strong>Backend workflows (<code>BE –</code>):</strong> Broadcast Job; Apply Rating to Reputation; Apply Dispute Outcome (terminal only); Recompute Reputation; Flag Expiring Trials (daily); Purge CNIC/Selfie (post-verification); Send SMS (provider alert); Check Phone/CNIC Uniqueness (signup).</li>
+<li><strong>External integrations:</strong> OneSignal (native push); SMS gateway for provider alerts; payment gateway (Safepay/PayPro) deferred to post-v1 (subscription manual at launch).</li>
+<li><strong>App structure:</strong> one Bubble app, three role-gated surfaces (Resident mobile, Provider mobile, Admin web); single role-switch mobile binary with <code>res_*</code>/<code>prov_*</code> page trees + Role as first-class field (so a later split stays cheap); Admin stays in-app.</li>
+<li><strong>Store readiness:</strong> privacy policy, data-use disclosure, <strong>in-app account-deletion flow</strong> (Apple-mandated), native-feel nav to clear Apple 4.2; budget 2–4 review cycles; Apple ($99/yr) + Google ($25) dev accounts.</li>
+<li><strong>Conventions:</strong> maintain the one-page CONVENTIONS sheet (Glossary→Data Type map, prefix legend, locked enums, formats) as source of truth; environment discipline (never test on Live).</li>
+<li><strong>Build order:</strong> Phase 0 (Wizard-of-Oz concierge, no real build) → Phase 1 Foundation → Phase 2 demand loop (early) + thin provider feed → Phase 3 trust loop → Phase 4 deferred heavy machinery (full admin verification queue, automated uniqueness/CNIC-purge, subscription automation).</li>
+</ul>
+<h3>UX Design Requirements</h3>
+<p>No standalone UX specification was produced (deliberate — Bubble supplies the UI for a no-code v1). UX-critical requirements are captured as NFR6 (localization/accessibility) and within FR3 (humanized provider card) and FR21/FR22 (honest expectation-setting + reassuring empty states), and should be honored at story level.</p>
+<h3>FR Coverage Map</h3>
+<ul>
+<li>FR1 → Epic 1 (provider sign-up)</li>
+<li>FR2 → Epic 1 (verification gate)</li>
+<li>FR3 → Epic 3 (humanized provider card / profile display)</li>
+<li>FR4 → Epic 3 (persistent reputation; CNIC-uniqueness enforced in Epic 1)</li>
+<li>FR5 → Epic 3 (neighbor social proof)</li>
+<li>FR6 → Epic 2 (post a job)</li>
+<li>FR7 → Epic 2 (provider job discovery)</li>
+<li>FR8 → Epic 2 (submit a bid)</li>
+<li>FR9 → Epic 2 (compare bids)</li>
+<li>FR10 → Epic 2 (award the job)</li>
+<li>FR11 → Epic 2 (offline completion)</li>
+<li>FR12 → Epic 2 (mark job completed)</li>
+<li>FR13 → Epic 3 (rate the result)</li>
+<li>FR14 → Epic 3 (Adab score)</li>
+<li>FR15 → Epic 4 (raise a dispute)</li>
+<li>FR16 → Epic 4 (founder review &amp; legitimacy judgment)</li>
+<li>FR17 → Epic 2 (bid-eligibility gate-check) + Epic 5 (billing)</li>
+<li>FR18 → Epic 5 (subscription payment &amp; status)</li>
+<li>FR19 → Epic 2 (availability signal)</li>
+<li>FR20 → Epic 2 (broadcast &amp; push+SMS notification)</li>
+<li>FR21 → Epic 2 (supply-aware expectation setting)</li>
+<li>FR22 → Epic 2 (empty-state capture + concierge backstop)</li>
+<li>FR23 → Epic 4 (provider right to respond)</li>
+<li>FR24 → Epic 4 (pattern weighting)</li>
+<li>FR25 → Epic 4 (resident standing)</li>
+</ul>
+<h2>Epic List</h2>
+<h3>Milestone 0 — Concierge Validation (Phase 0, NO software build) 🧪</h3>
+<p>Before any build, the founder runs the Wizard-of-Oz loop with ~15–20 residents (manual intake → relay quotes → capture rating/Adab by hand) to validate that residents post &amp; transact and that recourse matters. <strong>A go/no-go gate above the epic list — not a software epic.</strong></p>
+<h3>Epic 1: Foundation &amp; Trusted Provider Onboarding</h3>
+<p>A founder can stand up the Bubble app and onboard + verify the seeded providers; a verified provider profile exists with privacy locked down. <strong>Scope is promoted to the full core-schema skeleton</strong> to avoid live-data migrations on Bubble: define ALL core data types and their key fields now (even if later epics populate them) — <code>User</code> (role), <code>Provider</code> (incl. <code>avg_rating</code>, <code>rating_count</code>, <code>adab_score</code>, <code>subscription_status</code>, <code>subscription_expiry</code>), <code>Provider Private</code> (CNIC/selfie), <code>Resident Profile</code> (precinct, standing), <code>Job</code> (with the FULL status option-set: <code>posted→bidding→awarded→connected→completed→disputed→closed</code> and a <code>Dispute</code> link field), <code>Bid</code>, <code>Rating</code>, <code>Dispute</code>, <code>Notification</code>; <code>Trade</code>/<code>Precinct</code> Option Sets; <strong>restrictive-first per-role privacy rules</strong> (reputation fields non-client-writable from day one); and the <strong>CNIC-uniqueness gate as a backend workflow</strong> (not a client search).
+<strong>FRs covered:</strong> FR1, FR2 <em>(+ architecture Foundation/"starter": Bubble app + Web+Mobile plan, conventions sheet, NFR1/NFR2 scaffolding)</em></p>
+<h3>Epic 2: The Job Loop — Post → Bid → Award → Connect</h3>
+<p>A resident posts a job; available, verified providers are alerted (push + SMS) and bid; the resident compares on reputation and awards; the two connect offline — with honest supply-aware expectation-setting, an empty-state/concierge backstop, and a light subscription gate-check (everyone is on <code>trial</code> at launch). <strong>Full bid/award auction is in v1 from the start.</strong> Note: the server-side <strong>broadcast (FR19–22)</strong> is its own backend/integration story cluster (scheduled API workflow + SMS connector + push plugin), distinct from the client-side loop.
+<strong>FRs covered:</strong> FR6, FR7, FR8, FR9, FR10, FR11, FR12, FR19, FR20, FR21, FR22, FR17 <em>(gate-check only)</em></p>
+<h3>Epic 3: Reputation &amp; Trust — Rating, Adab, Profile, Social Proof</h3>
+<p>After a job, residents rate the result and manners; provider reputation accumulates permanently (server-side writes into the Epic 1 fields) and surfaces humanely on the hire-time card, with anonymous neighbor social proof.
+<strong>FRs covered:</strong> FR3, FR4, FR5, FR13, FR14</p>
+<h3>Epic 4: Accountability &amp; Recourse — Disputes</h3>
+<p>Residents have real recourse; a fair dispute system (provider right-to-respond, founder adjudication, pattern weighting) protects both sides, with anti-abuse resident standing. <em>In early v1, recourse can stay founder-operated until volume justifies the full software.</em>
+<strong>FRs covered:</strong> FR15, FR16, FR23, FR24, FR25</p>
+<h3>Epic 5: Provider Subscription &amp; Sustainability (last; deferrable past initial launch)</h3>
+<p>Providers run a 2-month free trial then subscribe to keep bidding; the founder tracks status/expiry so the platform pays for itself. <strong>The bid gate-check lives in Epic 2; this epic adds the billing + expiry-flag machinery</strong> — which can launch ~2 months after go-live, since the trial covers everyone initially.
+<strong>FRs covered:</strong> FR17, FR18</p>
+<hr />
+<h2>Epic 1: Foundation &amp; Trusted Provider Onboarding</h2>
+<p>Stand up the Bubble app and onboard + verify the seeded providers, with the full data-model skeleton and privacy locked down so later epics never migrate live data.</p>
+<h3>Story 1.1: Create the Bubble app &amp; confirm plan capabilities</h3>
+<p>As the <strong>founder/builder</strong>,
+I want the Bubble Web+Mobile app created and its plan capabilities confirmed,
+So that I have a foundation that supports the server-side and notification work later epics need.</p>
+<p><strong>Acceptance Criteria:</strong></p>
+<p><strong>Given</strong> a new Bubble project
+<strong>When</strong> the app is created on the Web + Mobile plan
+<strong>Then</strong> API Workflows (server-side) are available <strong>And</strong> point-in-time restore is available on the plan <strong>And</strong> a <code>Role</code> Option Set (Resident/Provider/Admin) and the <code>res_*</code>/<code>prov_*</code>/<code>admin_*</code> page-prefix convention are established <strong>And</strong> a one-page CONVENTIONS sheet (Glossary→Data Type map, prefix legend, enums, formats) is started.</p>
+<h3>Story 1.2: Define the full core data-model skeleton</h3>
+<p>As the <strong>founder/builder</strong>,
+I want all core data types, key fields, and Option Sets defined up front,
+So that adding ratings/disputes/subscription later never forces a live-data migration.</p>
+<p><strong>Acceptance Criteria:</strong></p>
+<p><strong>Given</strong> the Bubble database
+<strong>When</strong> the schema is created
+<strong>Then</strong> these data types exist with their key fields: <code>User</code> (role), <code>Provider</code> (trades, precinct, availability, <code>avg_rating</code>, <code>rating_count</code>, <code>adab_respect</code>, <code>adab_cleanup</code>, <code>adab_punctuality</code>, <code>subscription_status</code>, <code>subscription_expiry</code>), <code>Provider Private</code> (cnic, selfie, verification raw), <code>Resident Profile</code> (precinct, standing), <code>Job</code> (trade, description, precinct, status, dispute link), <code>Bid</code> (price, note, status), <code>Rating</code> (overall, review, adab fields), <code>Dispute</code> (reason, status, provider_response, admin_notes), <code>Notification</code> (provider, job, sent)
+<strong>And</strong> <code>Job.status</code> is an Option Set enumerating the FULL lifecycle (<code>posted</code>/<code>bidding</code>/<code>awarded</code>/<code>connected</code>/<code>completed</code>/<code>disputed</code>/<code>closed</code>)
+<strong>And</strong> <code>Trade</code> and <code>Precinct</code> Option Sets use ASCII slug internal names + Display text.</p>
+<h3>Story 1.3: Lock restrictive-first privacy rules</h3>
+<p>As the <strong>founder</strong>,
+I want privacy rules set deny-by-default with sensitive and reputation fields locked from day one,
+So that no CNIC leaks and reputation can never be written client-side.</p>
+<p><strong>Acceptance Criteria:</strong></p>
+<p><strong>Given</strong> the core data types exist
+<strong>When</strong> privacy rules are configured
+<strong>Then</strong> every type defaults to no fields visible, exposed explicitly per role <strong>And</strong> <code>Provider Private</code> is visible to owner + admin only <strong>And</strong> the <code>cnic</code>/<code>selfie</code> file fields are private files (an incognito GET of the file URL returns 403) <strong>And</strong> <code>Provider</code> reputation fields (<code>avg_rating</code>, <code>rating_count</code>, <code>adab_*</code>) are NOT modifiable by the logged-in user (only API/admin context).</p>
+<h3>Story 1.4: Provider sign-up (FR1)</h3>
+<p>As a <strong>prospective provider</strong>,
+I want to register quickly with my identity and trades,
+So that I can start receiving jobs once verified.</p>
+<p><strong>Acceptance Criteria:</strong></p>
+<p><strong>Given</strong> the Provider sign-up screen
+<strong>When</strong> a provider submits phone (OTP-verified), name, CNIC number, a selfie, one+ Trades, and primary Precinct
+<strong>Then</strong> a <code>Provider</code> (+ linked <code>Provider Private</code>) is created in <code>Pending</code> state <strong>And</strong> sign-up cannot complete if phone OTP, CNIC, selfie, or at least one Trade is missing <strong>And</strong> the CNIC/selfie are stored as private files.</p>
+<h3>Story 1.5: CNIC/phone uniqueness gate (NFR1)</h3>
+<p>As the <strong>platform</strong>,
+I want duplicate CNIC/phone registrations blocked server-side,
+So that a provider cannot abandon a bad reputation and start fresh.</p>
+<p><strong>Acceptance Criteria:</strong></p>
+<p><strong>Given</strong> a provider submits sign-up
+<strong>When</strong> a backend (server-side) workflow checks the CNIC and phone against existing records
+<strong>Then</strong> a duplicate CNIC or phone is rejected before a new <code>Provider</code> is created <strong>And</strong> the check runs server-side (not a client-side search that could expose CNIC).</p>
+<h3>Story 1.6: Admin verification &amp; post-verify purge (FR2)</h3>
+<p>As the <strong>founder/admin</strong>,
+I want to review and verify pending providers and then purge their raw ID images,
+So that only vetted providers win jobs and sensitive data isn't retained.</p>
+<p><strong>Acceptance Criteria:</strong></p>
+<p><strong>Given</strong> a <code>Pending</code> provider in the admin review screen
+<strong>When</strong> the admin confirms the selfie visibly matches the CNIC and approves
+<strong>Then</strong> the provider is marked <code>Verified</code> <strong>And</strong> only <code>Verified</code> providers can have a Bid accepted <strong>And</strong> a <code>Pending</code> provider may browse but not win jobs <strong>And</strong> after verification, a workflow deletes the CNIC/selfie image (retaining only <code>verified=true</code> + a hash/last-4).</p>
+<hr />
+<h2>Epic 2: The Job Loop — Post → Bid → Award → Connect</h2>
+<p>A resident posts a job; verified, available providers are alerted and bid; the resident compares on reputation and awards; the two connect offline.</p>
+<h3>Story 2.1: Post a job (FR6)</h3>
+<p>As a <strong>resident</strong>,
+I want to post a small job for a trade in my precinct,
+So that nearby providers can respond.</p>
+<p><strong>Acceptance Criteria:</strong></p>
+<p><strong>Given</strong> the Post-a-Job screen
+<strong>When</strong> the resident selects a Trade, enters a description, and confirms their Precinct
+<strong>Then</strong> a <code>Job</code> is created in <code>posted</code>/<code>Open</code> state visible to Verified providers in that Trade <strong>And</strong> the Job cannot be posted without a Trade and a Precinct.</p>
+<h3>Story 2.2: Provider availability signal (FR19)</h3>
+<p>As a <strong>provider</strong>,
+I want to set whether I'm currently available,
+So that I'm only alerted for jobs when I can take them, and residents see honest supply.</p>
+<p><strong>Acceptance Criteria:</strong></p>
+<p><strong>Given</strong> a verified provider
+<strong>When</strong> they toggle Available/Unavailable
+<strong>Then</strong> the state is stored <strong>And</strong> availability auto-expires to Unavailable after N days of inactivity <strong>And</strong> only Available providers feed the "online now" signal and real-time alerts.</p>
+<h3>Story 2.3: Provider job discovery (FR7)</h3>
+<p>As a <strong>provider</strong>,
+I want to see open jobs matching my trades and area,
+So that I can choose which to bid on.</p>
+<p><strong>Acceptance Criteria:</strong></p>
+<p><strong>Given</strong> a verified provider
+<strong>When</strong> they open the job feed
+<strong>Then</strong> they see only Open Jobs in Trades they offer <strong>And</strong> each Job shows precinct/distance but NOT the exact address/contact until the Job is awarded to them.</p>
+<h3>Story 2.4: Submit a bid with subscription gate-check (FR8, FR17 gate)</h3>
+<p>As a <strong>provider</strong>,
+I want to respond to a job with a price,
+So that I can win the work.</p>
+<p><strong>Acceptance Criteria:</strong></p>
+<p><strong>Given</strong> an Open Job and a verified provider
+<strong>When</strong> they submit a single price + optional note
+<strong>Then</strong> at most one active Bid per Job exists (editable until award) <strong>And</strong> the bid is accepted only if the provider's <code>subscription_status</code> is <code>trial</code> or <code>active</code> (at launch everyone is <code>trial</code>) <strong>And</strong> bids are single-price (no tiers).</p>
+<h3>Story 2.5: Broadcast &amp; provider notifications — backend (FR20)</h3>
+<p>As the <strong>platform</strong>,
+I want to alert all matching available providers when a job is posted,
+So that providers respond quickly even with push unreliability.</p>
+<p><strong>Acceptance Criteria:</strong></p>
+<p><strong>Given</strong> a newly posted Job
+<strong>When</strong> a scheduled/backend API workflow runs
+<strong>Then</strong> all Verified + Available providers matching the Trade/area receive a <strong>push (OneSignal) and SMS</strong> alert with trade + area <strong>And</strong> one <code>Notification</code> row is written per provider with a <code>sent</code> flag (idempotent, retryable) <strong>And</strong> the broadcast runs server-side and does not block the resident's UI.</p>
+<h3>Story 2.6: Supply-aware expectation setting (FR21)</h3>
+<p>As a <strong>resident</strong>,
+I want an honest sense of whether providers will respond,
+So that I'm not left staring at silence.</p>
+<p><strong>Acceptance Criteria:</strong></p>
+<p><strong>Given</strong> the resident is posting/awaiting bids
+<strong>When</strong> the screen renders
+<strong>Then</strong> with ≥1 matching Available provider it shows the online count <strong>And</strong> a response-time indication appears only once enough historical bid data exists (no fabricated ETA at launch) <strong>And</strong> with 0 Available providers it plainly says so (no real-time promise implied).</p>
+<h3>Story 2.7: Empty-state capture &amp; concierge backstop (FR22)</h3>
+<p>As a <strong>resident</strong>,
+I want my request kept alive when no one responds,
+So that a thin early marketplace still resolves my job.</p>
+<p><strong>Acceptance Criteria:</strong></p>
+<p><strong>Given</strong> a Job with no Available providers or no bids in the window
+<strong>When</strong> the empty state is shown
+<strong>Then</strong> the resident can leave the request and is notified when the first/each Bid arrives <strong>And</strong> the founder/admin is alerted to manually recruit/assign a provider <strong>And</strong> the Job stays Open (no dead-end).</p>
+<h3>Story 2.8: Compare bids &amp; award (FR9, FR10)</h3>
+<p>As a <strong>resident</strong>,
+I want to compare responses and choose one,
+So that I hire on reputation, not just price.</p>
+<p><strong>Acceptance Criteria:</strong></p>
+<p><strong>Given</strong> a Job with one or more Bids
+<strong>When</strong> the resident views the bids
+<strong>Then</strong> each Bid shows price + the provider's rating + distance + social proof, not default-sorted by cheapest <strong>And</strong> awarding moves the Job to <code>Awarded</code>, closes it to further bids, and shares each party's contact details.</p>
+<h3>Story 2.9: Offline completion &amp; mark complete (FR11, FR12)</h3>
+<p>As a <strong>resident</strong>,
+I want to mark a job done after the provider finishes,
+So that I can then rate it.</p>
+<p><strong>Acceptance Criteria:</strong></p>
+<p><strong>Given</strong> an Awarded Job
+<strong>When</strong> the work is done offline (paid in cash)
+<strong>Then</strong> there is no in-app payment/charge for the Job <strong>And</strong> the resident can mark the Job <code>Completed</code>, which enables rating.</p>
+<hr />
+<h2>Epic 3: Reputation &amp; Trust — Rating, Adab, Profile, Social Proof</h2>
+<p>After a job, residents rate the result and manners; reputation accumulates permanently and surfaces humanely.</p>
+<h3>Story 3.1: Rate the result (FR13)</h3>
+<p>As a <strong>resident</strong>,
+I want to score a completed job and leave a review,
+So that good work is rewarded and bad work has consequences.</p>
+<p><strong>Acceptance Criteria:</strong></p>
+<p><strong>Given</strong> a Completed Job
+<strong>When</strong> the resident submits an overall Rating (1–5) and optional review
+<strong>Then</strong> a <code>Rating</code> record is created <strong>And</strong> it triggers a server-side reputation update (Story 3.3) <strong>And</strong> only a Completed Job can be rated.</p>
+<h3>Story 3.2: Adab score (FR14)</h3>
+<p>As a <strong>resident</strong>,
+I want to rate respect, cleanup, and punctuality,
+So that manners count toward a provider's standing.</p>
+<p><strong>Acceptance Criteria:</strong></p>
+<p><strong>Given</strong> a Completed Job being rated
+<strong>When</strong> the resident taps the three Adab dimensions (Respect, Cleanup, Punctuality)
+<strong>Then</strong> the Adab values are stored on the <code>Rating</code> <strong>And</strong> displayed distinctly from the overall Rating (lightweight, a few taps).</p>
+<h3>Story 3.3: Reputation aggregation &amp; recompute (FR4, NFR1)</h3>
+<p>As the <strong>platform</strong>,
+I want reputation computed server-side from raw components with a recompute fallback,
+So that it stays permanent, consistent, and rebuildable.</p>
+<p><strong>Acceptance Criteria:</strong></p>
+<p><strong>Given</strong> a new <code>Rating</code> (or terminal Dispute outcome)
+<strong>When</strong> a backend workflow runs
+<strong>Then</strong> it increments raw components (<code>rating_sum</code>/<code>rating_count</code>, Adab sums) and updates the cached <code>avg_rating</code>/<code>adab_*</code> on <code>Provider</code> <strong>And</strong> an admin "Recompute reputation from source" button rebuilds these from all <code>Rating</code> records <strong>And</strong> reputation cannot be reset/deleted by any in-app provider action.</p>
+<h3>Story 3.4: Humanized provider card / profile (FR3)</h3>
+<p>As a <strong>resident</strong>,
+I want to see a provider's track record clearly but humanely,
+So that I can judge trust without being misled or scaring off good providers.</p>
+<p><strong>Acceptance Criteria:</strong></p>
+<p><strong>Given</strong> a provider with history
+<strong>When</strong> their card/profile renders
+<strong>Then</strong> the glance layer shows rating + job count + a positively-framed trust line ("83 jobs · 81 went smoothly") — never a raw unresolved-dispute count <strong>And</strong> a one-tap detail layer shows the honest dispute breakdown (unresolved = "we're looking into this") with the provider's reply <strong>And</strong> Adab sub-scores live in the detail layer <strong>And</strong> a new provider shows a deliberate "New · verified ID" zero-state.</p>
+<h3>Story 3.5: Neighbor social proof (FR5)</h3>
+<p>As a <strong>resident</strong>,
+I want to see how many neighbors used a provider,
+So that local trust informs my choice.</p>
+<p><strong>Acceptance Criteria:</strong></p>
+<p><strong>Given</strong> a provider viewed by a resident
+<strong>When</strong> the card renders
+<strong>Then</strong> it shows "used by N homes in [resident's Precinct]" as an anonymous count (never names) <strong>And</strong> when N is 0 the signal is hidden/neutral (no fabricated numbers).</p>
+<hr />
+<h2>Epic 4: Accountability &amp; Recourse — Disputes</h2>
+<p>A fair dispute system gives residents recourse while protecting providers from bad-faith flags.</p>
+<h3>Story 4.1: Raise a dispute (FR15)</h3>
+<p>As a <strong>resident</strong>,
+I want to flag a bad job,
+So that I'm not left helpless after poor work.</p>
+<p><strong>Acceptance Criteria:</strong></p>
+<p><strong>Given</strong> a Completed Job the resident hired
+<strong>When</strong> they flag it with a short reason
+<strong>Then</strong> a <code>Dispute</code> is created in <code>pending_review</code> (not shown publicly) <strong>And</strong> the founder and the provider are notified.</p>
+<h3>Story 4.2: Provider right to respond (FR23)</h3>
+<p>As a <strong>provider</strong>,
+I want to give my side before any reputation impact,
+So that I'm not branded unfairly.</p>
+<p><strong>Acceptance Criteria:</strong></p>
+<p><strong>Given</strong> a <code>pending_review</code> Dispute
+<strong>When</strong> the provider submits their response within the window
+<strong>Then</strong> the response is stored on the <code>Dispute</code> <strong>And</strong> no reputation change is applied while the Dispute is pending.</p>
+<h3>Story 4.3: Founder adjudication &amp; reputation impact (FR16)</h3>
+<p>As the <strong>founder</strong>,
+I want to judge a dispute after hearing both sides,
+So that only legitimate problems affect a provider's standing.</p>
+<p><strong>Acceptance Criteria:</strong></p>
+<p><strong>Given</strong> a <code>pending_review</code> Dispute with both sides
+<strong>When</strong> the admin records an outcome
+<strong>Then</strong> the outcome is one of <code>Legitimate–Remedied</code> / <code>Legitimate–Unresolved</code> / <code>Not Upheld</code> <strong>And</strong> only Legitimate outcomes affect public reputation (via Story 3.3) <strong>And</strong> a <code>Not Upheld</code> dispute never stains the provider and is not shown publicly.</p>
+<h3>Story 4.4: Pattern weighting (FR24)</h3>
+<p>As the <strong>platform</strong>,
+I want repeated legitimate disputes to weigh more than a single one,
+So that a one-off is forgiven but a pattern damages standing.</p>
+<p><strong>Acceptance Criteria:</strong></p>
+<p><strong>Given</strong> a provider's legitimate-dispute history
+<strong>When</strong> reputation/standing is computed
+<strong>Then</strong> a single Legitimate dispute is low-weight (he-said/she-said) <strong>And</strong> a pattern materially lowers standing (threshold build-time tunable).</p>
+<h3>Story 4.5: Resident standing anti-abuse (FR25)</h3>
+<p>As the <strong>platform</strong>,
+I want bad-faith flagging to cost the resident,
+So that disputes aren't weaponized against good providers.</p>
+<p><strong>Acceptance Criteria:</strong></p>
+<p><strong>Given</strong> a resident's dispute history
+<strong>When</strong> disputes are repeatedly judged <code>Not Upheld</code>
+<strong>Then</strong> the resident's internal standing is lowered <strong>And</strong> v1 may start by simply tracking it (effect build-time tunable).</p>
+<hr />
+<h2>Epic 5: Provider Subscription &amp; Sustainability</h2>
+<p>Track trials and subscriptions so the platform pays for itself; deferrable until ~2 months post-launch.</p>
+<h3>Story 5.1: Subscription status tracking (FR18)</h3>
+<p>As the <strong>founder</strong>,
+I want to see and manage each provider's subscription state,
+So that I can collect fees and keep access correct.</p>
+<p><strong>Acceptance Criteria:</strong></p>
+<p><strong>Given</strong> providers with <code>subscription_status</code> and <code>subscription_expiry</code> (from Epic 1)
+<strong>When</strong> the admin opens the subscription dashboard
+<strong>Then</strong> each provider's status (<code>trial</code>/<code>active</code>/<code>expired</code>) and expiry are visible <strong>And</strong> the admin can record a manual payment (bank transfer/JazzCash/Easypaisa) that sets status to <code>active</code> with a new expiry.</p>
+<h3>Story 5.2: Trial expiry flagging &amp; gate enforcement (FR17 billing)</h3>
+<p>As the <strong>platform</strong>,
+I want trials and subscriptions to expire correctly,
+So that bidding access reflects who has paid after the free period.</p>
+<p><strong>Acceptance Criteria:</strong></p>
+<p><strong>Given</strong> a daily backend workflow
+<strong>When</strong> it runs
+<strong>Then</strong> providers whose <code>trial</code>/<code>active</code> period is ending/ended are flagged for the admin <strong>And</strong> a provider whose status is <code>expired</code> cannot submit new Bids (Epic 2 gate-check) but keeps their profile and reputation <strong>And</strong> the 2-month trial starts at verification.</p></body></html>

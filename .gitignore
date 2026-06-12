@@ -1,0 +1,20 @@
+# Node
+node_modules/
+
+# Expo
+.expo/
+dist/
+*.apk
+*.aab
+
+# Supabase local
+supabase/.temp/
+supabase/.branches/
+
+# Env & secrets — never commit; FCM V1 service-account JSON lives ONLY in EAS credentials
+.env*
+*service-account*.json
+
+# OS / editor
+Thumbs.db
+.DS_Store

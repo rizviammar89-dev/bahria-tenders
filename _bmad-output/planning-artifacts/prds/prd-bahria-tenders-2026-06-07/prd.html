@@ -1,0 +1,331 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<title>PRD — Bahria Town Karachi Home-Services Marketplace</title>
+<style>
+@page { size: A4; margin: 20mm 18mm; }
+* { box-sizing: border-box; }
+body { font-family: 'Segoe UI', Calibri, Arial, sans-serif; font-size: 10.5pt; line-height: 1.5; color: #1a1a1a; }
+h1 { font-size: 22pt; color: #0f4c5c; border-bottom: 3px solid #0f4c5c; padding-bottom: 6px; margin-top: 0; }
+h2 { font-size: 15pt; color: #0f4c5c; margin-top: 22px; border-bottom: 1px solid #d0dadd; padding-bottom: 3px; }
+h3 { font-size: 12.5pt; color: #14606f; margin-top: 16px; }
+h4 { font-size: 10.5pt; color: #333; margin-top: 12px; margin-bottom: 4px; background: #f0f5f6; padding: 3px 8px; border-left: 3px solid #14606f; }
+p { margin: 6px 0; }
+ul, ol { margin: 6px 0; padding-left: 22px; }
+li { margin: 3px 0; }
+strong { color: #0a0a0a; }
+em { color: #444; }
+code { font-family: 'Consolas','Courier New',monospace; background: #eef2f3; padding: 1px 5px; border-radius: 3px; font-size: 9.5pt; }
+blockquote { border-left: 4px solid #9ec5cd; background: #f6fafb; margin: 8px 0; padding: 6px 14px; color: #2a2a2a; }
+table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; }
+th, td { border: 1px solid #cdd8da; padding: 5px 8px; text-align: left; vertical-align: top; }
+th { background: #0f4c5c; color: #fff; }
+tr:nth-child(even) td { background: #f6fafb; }
+hr { border: none; border-top: 1px solid #d0dadd; margin: 18px 0; }
+.cover { color:#666; font-size:9.5pt; margin-bottom:18px; }
+</style></head><body>
+<div class="cover">Product Requirements Document &middot; Status: Final (rev. incl. architecture refinements) &middot; 2026-06-07</div>
+<h1>PRD: Bahria Town Karachi Home-Services Marketplace</h1>
+<h2>0. Document Purpose</h2>
+<p>This PRD is for the founder (Ammar) and any future collaborator or no-code builder who implements v1. It translates the finalized product brief (<code>_bmad-output/planning-artifacts/briefs/brief-bahria-tenders-2026-06-07/brief.md</code> + <code>addendum.md</code>) into capabilities and functional requirements. It is Glossary-anchored: features are grouped, FRs are nested, assumptions are tagged inline as <code>[ASSUMPTION]</code> and indexed in §9. (FR numbering is explained in §4.) Tech-how (no-code platform choice, data storage mechanics) lives in the addendum, not here. The product is a passion project built solo on no-code tooling, so scope is deliberately tight — the parked Phase-2 roadmap lives in the brief's addendum and is out of scope here.</p>
+<h2>1. Vision</h2>
+<p>A trusted home-services marketplace built specifically for <strong>Bahria Town Karachi</strong>, where the core asset is <strong>persistent provider reputation</strong>. Every tradesman carries a permanent, public track record that follows them across every job, so for the first time a bad job has lasting consequences and a good one compounds into more work. This is the thing word-of-mouth and building-management referrals structurally cannot do.</p>
+<p>For residents, it replaces the recurring gamble of hiring small-job tradesmen — and the helplessness when the work is bad — with the ability to compare providers on reputation, distance, and what their own neighbors have said, then have those providers compete for the job. For providers, it gives skilled-but-invisible solo tradesmen a reputation that travels and a way to win work on merit instead of only on lowest price.</p>
+<p>The advantage is focus and local trust density, not technology: by going deep in one gated community, the platform builds a hyper-local trust moat a national app cannot replicate. v1 proves the core trust loop with a single simple job flow across six trades; everything ambitious (the 3D Design Studio, renovations, two-mode flows) is deferred.</p>
+<h2>2. Target User</h2>
+<h3>2.1 Jobs To Be Done</h3>
+<p><strong>Residents (demand)</strong> — the household acts as a unit: the housewife typically deals with the problem and supervises the work, while the husband often controls payment and signs off on bigger spends.
+- When a small home job comes up (every few months), find a tradesman I can trust <em>without</em> gambling on a single blind referral.
+- Know <em>before</em> I let someone into my home whether he is competent, respectful, and accountable.
+- Have real recourse when the work is bad — so I am not left helpless after paying.</p>
+<p><strong>Providers (supply — the bottleneck):</strong>
+- Prove I am good and reliable when I have no travelling reputation, so I can win work.
+- As a newcomer, get a fair shot at a first job against established names.
+- Win work on merit (skill, manners, reliability) rather than being forced into a race to the bottom on price.
+- Build a reputation that compounds into a steady livelihood.</p>
+<h3>2.2 Non-Users (v1)</h3>
+<ul>
+<li><strong>Interior designers and renovation contractors</strong> — deferred until the Design Studio / Court-mode phase.</li>
+<li><strong>Residents outside Bahria Town Karachi</strong> — the trust model depends on single-community density.</li>
+<li><strong>Multi-worker companies / service shops</strong> — v1 targets independent solo tradesmen; crew/roster management is parked.</li>
+</ul>
+<h3>2.3 Key User Journeys</h3>
+<ul>
+<li><strong>UJ-1. Ayesha hires a trusted plumber without the usual gamble.</strong></li>
+<li><strong>Persona + context:</strong> Ayesha, a homeowner in Precinct 10, has a leaking tap. Today she'd WhatsApp a neighbor and hope. She wants confidence, not a coin-flip.</li>
+<li><strong>Entry state:</strong> Authenticated resident on the mobile app.</li>
+<li><strong>Path:</strong> Opens app → picks Trade (plumber) and types the problem → <strong>before/as she posts, the app sets expectations honestly based on real supply</strong>: "3 plumbers near you are online now" (with a typical response time once enough data exists) → she posts → the Job <strong>broadcasts at once to all available matching Providers</strong>, who each send a single price → she watches prices arrive in near-real-time, each showing price, rating, Adab Score, distance, and "used by N homes in your precinct" → compares and shortlists two → picks one on reputation, not just lowest price.</li>
+<li><strong>Climax:</strong> She confirms the provider; both get each other's contact details to coordinate the visit. She feels she chose with real information.</li>
+<li><strong>Resolution:</strong> Job happens offline, paid in cash. Afterward she rates the work and the provider's manners. Her choice is now part of his permanent record.</li>
+<li>
+<p><strong>Edge case (the make-or-break moment):</strong> If <strong>no Providers are online</strong>, the app does not leave her in silence — it says so honestly and lets her <strong>leave the request and be notified the moment a Provider responds</strong>, rather than implying a real-time promise it can't keep.</p>
+</li>
+<li>
+<p><strong>UJ-2. Bilal, a newcomer carpenter, wins his first job on merit.</strong></p>
+</li>
+<li><strong>Persona + context:</strong> Bilal, 24, skilled but new to Bahria Town with no local reputation.</li>
+<li><strong>Entry state:</strong> Verified provider (CNIC + selfie) with a profile and selected trades.</li>
+<li><strong>Path:</strong> Sees a nearby job matching his trade → submits a price and a short note → resident compares him against established names; his "New — verified" status and fair price get him shortlisted → he is chosen.</li>
+<li><strong>Climax:</strong> He gets the job and the resident's contact; he does clean work.</li>
+<li><strong>Resolution:</strong> He earns his first rating and Adab score — the seed of a reputation that compounds.</li>
+<li>
+<p><strong>Edge case:</strong> If he loses the bid, the job simply closes for him; his standing is unaffected.</p>
+</li>
+<li>
+<p><strong>UJ-3. Ayesha flags a bad job and is not left helpless.</strong></p>
+</li>
+<li><strong>Persona + context:</strong> Ayesha hired a provider; the work was sloppy.</li>
+<li><strong>Entry state:</strong> Completed job in her history.</li>
+<li><strong>Path:</strong> Opens the job → flags it as a problem with a short reason → the Dispute enters Pending Review (not yet public) → the Provider is notified and gives his side → the founder reviews both sides and judges legitimacy.</li>
+<li><strong>Climax:</strong> If legitimate, the Provider is expected to make it right (re-do/remedy); if he doesn't, it's recorded against his reputation. If not upheld, nothing stains him.</li>
+<li><strong>Resolution:</strong> Ayesha has real recourse; the Provider had a fair hearing; future residents see only legitimate outcomes. A <em>pattern</em> against a Provider is what truly damages standing.</li>
+<li>
+<p><strong>Edge case (anti-abuse):</strong> If Ayesha repeatedly raises flags judged Not Upheld, her <em>own</em> standing drops — bad-faith disputing has a cost.</p>
+</li>
+<li>
+<p><strong>UJ-4. Bilal signs up and gets verified in minutes.</strong></p>
+</li>
+<li><strong>Persona + context:</strong> Bilal hears about the app from a friend; rent is due.</li>
+<li><strong>Path:</strong> Downloads app → enters phone (OTP), name, CNIC number + selfie, selects trades and his area → submits.</li>
+<li><strong>Climax/Resolution:</strong> Once verified, he can browse and respond to jobs immediately. <code>[ASSUMPTION: verification is a quick manual/automated check in v1; providers can be marked "Verified" or "Pending" and only Verified providers can win jobs.]</code></li>
+</ul>
+<h2>3. Glossary</h2>
+<ul>
+<li><strong>Resident</strong> — A Bahria Town Karachi household member (the housewife and/or husband) who posts jobs and hires Providers. The demand side.</li>
+<li><strong>Provider</strong> — An independent solo tradesman in one or more Trades who responds to Jobs. The supply side.</li>
+<li><strong>Trade</strong> — A service category. v1 Trades: A/C technician, plumber, carpenter, electrician, mason, painter.</li>
+<li><strong>Job</strong> — A request posted by a Resident for a specific Trade, with a description and a Precinct location. Has a lifecycle: Open → Awarded → Completed (or Cancelled).</li>
+<li><strong>Bid</strong> — A Provider's response to a Job: a price and optional short note. (Single price in v1; no tiers.)</li>
+<li><strong>Precinct</strong> — A named sub-area of Bahria Town Karachi, used for location and neighbor social proof.</li>
+<li><strong>Reputation</strong> — A Provider's persistent, public track record across all Jobs: ratings, reviews, Adab Score, job count, and dispute history. Permanent and cumulative.</li>
+<li><strong>Rating</strong> — A Resident's post-Job score of the overall result (e.g., 1–5 stars) plus a written review.</li>
+<li><strong>Adab Score</strong> — A Resident's post-Job rating of soft dimensions: Respect/politeness, Cleanup, Punctuality. Part of Reputation, shown distinctly from the overall Rating.</li>
+<li><strong>Neighbor Social Proof</strong> — A precinct-level usage signal on a Provider's profile, e.g., "used by N homes in your precinct."</li>
+<li><strong>Dispute</strong> — A Resident-raised flag that a completed Job's work was unsatisfactory. Lifecycle: Pending Review → outcome (Legitimate–Remedied, Legitimate–Unresolved, or Not Upheld). Only Legitimate outcomes affect public Reputation; raw Pending disputes are never public.</li>
+<li><strong>Resident Standing</strong> — An internal trust signal for a Resident, lowered by a pattern of Disputes judged Not Upheld (anti-abuse counterpart to provider Reputation).</li>
+<li><strong>Availability (Online)</strong> — Whether a Provider is currently available to receive real-time Job broadcasts. A Provider is Available or Unavailable; only Available Providers feed the "online now" expectation signal.</li>
+<li><strong>Verification</strong> — The provider check based on CNIC number + selfie. A Provider is Verified or Pending; only Verified Providers can win Jobs.</li>
+<li><strong>Subscription</strong> — The flat recurring fee a Provider pays for active access. The platform's only v1 revenue; Providers keep 100% of Job payments.</li>
+</ul>
+<h2>4. Features</h2>
+<p><em>FRs are globally numbered (FR-1…FR-25) with stable IDs. Numbering is non-sequential by section because later FRs were added to existing features during coaching: FR-19–22 belong to §4.3 and FR-23–25 to §4.6. Every ID appears exactly once. "Distance" throughout is </em><em>Precinct-derived</em><em> (which precinct a Resident/Provider is in), not GPS/real-time mapping (see §10).</em></p>
+<h3>4.1 Provider Onboarding &amp; Verification</h3>
+<p><strong>Description:</strong> Independent tradesmen sign up fast and prove identity, because supply is the bottleneck and trust starts at the door. Onboarding is deliberately light (the brief's "light gate, strong net"): minimal fields, quick verification, immediate ability to browse. Realizes UJ-4.</p>
+<p><strong>Functional Requirements:</strong></p>
+<h4>FR-1: Provider sign-up</h4>
+<p>A prospective Provider can register with phone number (OTP-verified), name, CNIC number, a selfie, one or more Trades, and their primary area/Precinct.
+<strong>Consequences (testable):</strong>
+- Sign-up cannot complete without phone OTP, CNIC number, selfie, and at least one Trade selected.
+- A Provider profile is created in <strong>Pending</strong> state on submission.</p>
+<h4>FR-2: Identity verification gate</h4>
+<p>The system marks a Provider as <strong>Verified</strong> or <strong>Pending</strong>, and only Verified Providers can be awarded Jobs. Verification is a <strong>light gate plus one cheap second signal</strong>: the selfie must visibly match the CNIC, and (for the launch cohort) the founder's personal vetting serves as the second signal.
+<strong>Consequences (testable):</strong>
+- A Pending Provider may browse Jobs but cannot have a Bid accepted.
+- Verification requires the selfie to visibly match the CNIC before a Provider is marked Verified.
+- <code>[ASSUMPTION: v1 verification is a manual founder review (selfie–CNIC match + personal vetting for early providers); there is no automated government CNIC API integration.]</code></p>
+<p><strong>Feature-specific NFRs:</strong>
+- CNIC number and selfie are sensitive personal data; access is restricted to the founder/admin and not shown publicly (see §10 Constraints).</p>
+<h3>4.2 Provider Profile &amp; Persistent Reputation</h3>
+<p><strong>Description:</strong> The heart of the product. Every Provider has a public profile carrying a permanent, cumulative reputation that follows them across all Jobs — the accountability engine. Realizes UJ-1, UJ-2.</p>
+<p><strong>Functional Requirements:</strong></p>
+<h4>FR-3: Public provider profile (humanized accountability)</h4>
+<p>A Resident can view a Provider's profile/card showing Trades, reputation, written reviews, total completed Job count, and Neighbor Social Proof. Accountability — including disputes — is surfaced <strong>humanely, in two layers</strong>, so it informs rather than frightens a non-technical reader in her second language.
+<strong>Consequences (testable):</strong>
+- <strong>Glance layer:</strong> overall Rating shown <strong>with job count</strong> ("4.6 from 83 jobs"), plus a <strong>plain-language, positively-framed trust line</strong> ("83 jobs done · 81 went smoothly") — never a raw "Legitimate–Unresolved count."
+- <strong>Detail layer (one tap):</strong> honest dispute breakdown; an unresolved Dispute is framed as <em>"we're looking into this"</em> (platform's open work), <strong>not a verdict of guilt</strong>, and the <strong>Provider's response is always shown</strong> (realizes FR-23 at the point of decision).
+- <strong>Adab sub-scores</strong> appear in the detail layer or as labeled icons (not five competing numbers at a glance); labeled "Adab" in the Urdu UI.
+- A <strong>new Provider with no history</strong> has a deliberately designed zero-state — "New · verified ID" framed neutrally-to-positively — so blank history reads "fresh start," not "unknown risk."</p>
+<h4>FR-4: Persistent reputation record</h4>
+<p>Reputation is permanent and cumulative; a Provider cannot reset or delete ratings, reviews, or dispute history by any in-app action.
+<strong>Consequences (testable):</strong>
+- Deleting/recreating a profile is prevented or detectable via CNIC uniqueness. <code>[ASSUMPTION: CNIC is unique per Provider and blocks duplicate accounts.]</code>
+- Past reviews and dispute outcomes remain visible after they occur.</p>
+<h4>FR-5: Neighbor social proof</h4>
+<p>The system shows a precinct-level usage count on a Provider's profile relative to the viewing Resident's Precinct.
+<strong>Consequences (testable):</strong>
+- Profile shows "used by N homes in [Resident's Precinct]" where N is the count of distinct Residents in that Precinct with a completed Job by this Provider.
+- The signal is <strong>anonymous/aggregate only</strong> — it shows a count, never Resident names, in v1. (Named, opt-in vouching is parked to Phase 2.)
+- When N is 0, the signal is hidden or shows a neutral state (no fabricated numbers).</p>
+<h3>4.3 Job Posting &amp; Matching</h3>
+<p><strong>Description:</strong> A Resident posts a small job; it <strong>broadcasts at once to all available matching Providers</strong>, who each respond with a price in near-real-time. One simple flow (no rescue/court split in v1). The platform makes the "respond now" promise <strong>only when supply actually exists</strong> — it sets expectations honestly up front (who's online, typical response time) and, when no one is available, captures the request and notifies the Resident rather than leaving them in silence. Realizes UJ-1.</p>
+<p><strong>Functional Requirements:</strong></p>
+<h4>FR-6: Post a job</h4>
+<p>A Resident can post a Job specifying Trade, a free-text description, and their Precinct.
+<strong>Consequences (testable):</strong>
+- A Job cannot be posted without a Trade and a Precinct.
+- A posted Job enters <strong>Open</strong> state and becomes visible to Verified Providers in that Trade.</p>
+<h4>FR-7: Provider job discovery</h4>
+<p>A Verified Provider can see Open Jobs that match their Trade(s) and area.
+<strong>Consequences (testable):</strong>
+- A Provider sees only Jobs in Trades they offer.
+- Jobs display the Resident's Precinct/distance but not exact address until awarded. <code>[ASSUMPTION: exact address/contact is shared only after a Provider is awarded the Job, for privacy.]</code></p>
+<h4>FR-8: Submit a bid</h4>
+<p>A Verified Provider can respond to an Open Job with a single price and an optional short note.
+<strong>Consequences (testable):</strong>
+- A Provider can submit at most one active Bid per Job (editable until the Job is awarded).
+- Bids are single-price; no Basic/Standard/Premium tiers in v1.</p>
+<h4>FR-19: Provider availability signal</h4>
+<p>The system tracks whether a Provider is currently <strong>available/online</strong> so broadcasts and expectation-setting reflect real supply. To prevent stale "Available" providers from misleading Residents, availability <strong>auto-expires after inactivity</strong>, and matching is backed by <strong>per-job accept/decline</strong>.
+<strong>Consequences (testable):</strong>
+- A Provider can be in an Available or Unavailable state via a manual toggle, which <strong>auto-flips to Unavailable after N days of inactivity</strong> (so a forgotten toggle doesn't overstate supply).
+- Only Available Providers are counted in the "online now" expectation signal and notified for real-time broadcast.
+- A broadcast Job offers matched Providers an explicit <strong>accept/decline</strong>, so a Resident sees responses from Providers who actually engage — a stale toggle degrades gracefully rather than producing silence. <code>[ASSUMPTION: inactivity window N and the toggle-vs-auto mechanism are build-time tunable.]</code></p>
+<h4>FR-20: Broadcast &amp; provider notification</h4>
+<p>On posting, a Job is pushed at once to all Verified, Available Providers matching its Trade and area, who are notified to respond. The provider job alert is delivered by <strong>push <em>and</em> SMS</strong>, because push is unreliable on the budget Android devices common to the provider base — and provider-receives-job is the most fragile link in the loop.
+<strong>Consequences (testable):</strong>
+- All matching Available Providers receive a notification (push + SMS) for a newly posted Job, with enough detail (trade, area) to decide without opening the app.
+- A Provider who was Unavailable at post time can still see and bid on the Job while it is Open (just not pushed in real-time).
+- <code>[ASSUMPTION: SMS is sent for provider job alerts only (not resident-side) to control cost; per-SMS budget TBD.]</code></p>
+<h4>FR-21: Supply-aware expectation setting</h4>
+<p>Before/at posting, the Resident is shown an honest expectation based on current supply.
+<strong>Consequences (testable):</strong>
+- When ≥1 matching Provider is Available, the Resident sees a count of who's online.
+- A typical response-time indication is shown <strong>only once enough historical Bid-response data exists</strong>; at launch (no data) the app shows the online count and a generic "providers usually respond shortly" rather than a fabricated number. <code>[ASSUMPTION: response-time ETA is derived from observed Bid response times, not shown until a baseline exists.]</code>
+- When 0 matching Providers are Available, the Resident is told so plainly — no real-time promise is implied.</p>
+<h4>FR-22: Empty-state capture, resident notification &amp; concierge backstop</h4>
+<p>When no Providers are Available (or none have responded), the Resident can leave the request and be notified when a Bid arrives — and a founder-operated <strong>concierge backstop</strong> ensures a thin early marketplace never reads as "dead."
+<strong>Consequences (testable):</strong>
+- A Resident is notified when the first/each Bid arrives on their Open Job, so they need not watch the screen.
+- An empty broadcast does not dead-end: the Job stays Open and the Resident is offered the leave-and-notify path.
+- When a Job receives no Bids within a window, the <strong>founder/admin is alerted to manually recruit or assign</strong> a suitable Provider (founder-as-concierge), so early-stage thin supply still results in a real outcome. <code>[ASSUMPTION: concierge is a manual admin workflow in v1; the no-bid window is build-time tunable.]</code></p>
+<h3>4.4 Compare, Choose &amp; Connect</h3>
+<p><strong>Description:</strong> The Resident reviews responses and chooses on reputation, not just price — then the two are connected to coordinate offline. Realizes UJ-1.</p>
+<p><strong>Functional Requirements:</strong></p>
+<h4>FR-9: Compare bids</h4>
+<p>A Resident can view all Bids on their Job, each showing price, the Provider's overall Rating, Adab Score, distance/Precinct, and Neighbor Social Proof.
+<strong>Consequences (testable):</strong>
+- Bids are viewable together for comparison; sorting does not default to lowest-price-only. <code>[ASSUMPTION: default presentation surfaces reputation alongside price rather than sorting purely by cheapest.]</code></p>
+<h4>FR-10: Award the job</h4>
+<p>A Resident can award the Job to one Provider, moving it to <strong>Awarded</strong>.
+<strong>Consequences (testable):</strong>
+- On award, the Job closes to further Bids.
+- On award, Resident and Provider receive each other's contact details to coordinate the visit.</p>
+<h4>FR-11: Offline completion (no in-app payment)</h4>
+<p>Job execution and payment happen offline; the app does not process Job payments in v1.
+<strong>Consequences (testable):</strong>
+- There is no payment gateway or in-app charge for a Job.
+- The system provides a way to mark a Job <strong>Completed</strong> (see FR-12) to enable rating.</p>
+<h3>4.5 Rating, Adab Score &amp; Reputation Update</h3>
+<p><strong>Description:</strong> After the job, the Resident rates the result and the provider's conduct, feeding the permanent reputation. Realizes UJ-1, UJ-2.</p>
+<p><strong>Functional Requirements:</strong></p>
+<h4>FR-12: Mark job completed</h4>
+<p>A Resident can mark an Awarded Job as <strong>Completed</strong>.
+<strong>Consequences (testable):</strong>
+- Only a Completed Job can be rated. <code>[ASSUMPTION: the Resident marks completion; if they don't, a Job may auto-prompt for completion after a set period.]</code></p>
+<h4>FR-13: Rate the result</h4>
+<p>A Resident can give a Completed Job an overall Rating (e.g., 1–5) and an optional written review.
+<strong>Consequences (testable):</strong>
+- The overall Rating updates the Provider's cumulative Reputation immediately.</p>
+<h4>FR-14: Adab Score</h4>
+<p>A Resident can rate three soft dimensions — Respect, Cleanup, Punctuality — for a Completed Job.
+<strong>Consequences (testable):</strong>
+- The Adab Score is stored and displayed distinctly from the overall Rating on the Provider profile.
+- Adab dimensions are lightweight (a few taps), not a long form.</p>
+<h3>4.6 Dispute &amp; Recourse</h3>
+<p><strong>Description:</strong> The Resident's protection against helplessness, deliberately balanced to also protect Providers (the bottleneck) from bad-faith flags. Resolution is remedy-or-reputation — no platform funds change hands. The mechanics (right to respond, review-before-record, pattern weighting, resident-standing anti-abuse) are specified in the FRs below. Realizes UJ-3.</p>
+<p><strong>Functional Requirements:</strong></p>
+<h4>FR-15: Raise a dispute</h4>
+<p>A Resident can flag a Completed Job as unsatisfactory with a short reason; the flag is tied to that real Job.
+<strong>Consequences (testable):</strong>
+- A Dispute can only be raised on a Completed Job the Resident actually hired.
+- Raising a Dispute notifies the founder/admin and the Provider, and enters a <strong>Pending Review</strong> state.
+- A raw, Pending-Review Dispute is <strong>not shown publicly</strong> on the Provider's profile.</p>
+<h4>FR-23: Provider right to respond</h4>
+<p>The Provider can submit their side of a Dispute before any Reputation impact is recorded.
+<strong>Consequences (testable):</strong>
+- The Provider is notified of a Dispute and can respond within a set window.
+- No Reputation change is applied while a Dispute is in Pending Review.</p>
+<h4>FR-16: Founder review &amp; legitimacy judgment</h4>
+<p>The founder/admin reviews both sides and records an outcome; only a Dispute judged <strong>legitimate</strong> affects the Provider's public Reputation.
+<strong>Consequences (testable):</strong>
+- Possible outcomes include: <strong>Legitimate–Remedied</strong>, <strong>Legitimate–Unresolved</strong>, or <strong>Not Upheld</strong> (no provider impact).
+- Only Legitimate outcomes appear in the Provider's public dispute history; <strong>Not Upheld</strong> disputes never stain the Provider.
+- No platform funds are paid out; resolution is remedy-or-reputation only.</p>
+<h4>FR-24: Pattern weighting</h4>
+<p>Repeated legitimate Disputes against the same Provider weigh more heavily on standing than any single one.
+<strong>Consequences (testable):</strong>
+- A single Legitimate Dispute is recorded but treated as low-weight (he-said/she-said).
+- A pattern of Legitimate Disputes is what materially damages a Provider's standing. <code>[ASSUMPTION: exact pattern threshold/weighting is a tunable rule, set during build.]</code></p>
+<h4>FR-25: Resident standing (anti-abuse)</h4>
+<p>A Resident's own standing is affected when their Disputes are repeatedly judged <strong>Not Upheld</strong> (bad-faith flagging).
+<strong>Consequences (testable):</strong>
+- A pattern of Not Upheld Disputes lowers the Resident's internal trust standing.
+- <code>[ASSUMPTION: low Resident standing's effect (e.g., warnings, reduced dispute weight, or visibility to providers) is a tunable rule set during build; v1 may start by simply tracking it.]</code></p>
+<h3>4.7 Provider Subscription</h3>
+<p><strong>Description:</strong> The platform's only v1 revenue. Providers pay a flat recurring fee for active access and keep 100% of every Job's payment. Realizes the business model.</p>
+<p><strong>Functional Requirements:</strong></p>
+<h4>FR-17: Subscription gating with free trial</h4>
+<p>A Provider gets their <strong>first 2 months free</strong>; after the trial, an active Subscription is required to submit new Bids.
+<strong>Consequences (testable):</strong>
+- A new Provider can bid freely during their first 2 months without any payment.
+- After the trial expires, a Provider without an active Subscription cannot submit new Bids (can still maintain a profile and Reputation).
+- The free trial is per-Provider, starting from their verification/first activation. <code>[ASSUMPTION: the flat fee amount is TBD; the trial length is fixed at 2 months.]</code></p>
+<h4>FR-18: Subscription payment &amp; status</h4>
+<p>The system records a Provider's Subscription status and renewal.
+<strong>Consequences (testable):</strong>
+- <code>[ASSUMPTION: v1 subscription is collected via a simple/manual method (e.g., bank transfer or a basic payment link) given the no-code build; full automated billing is not required for v1.]</code>
+- A Provider can see their current Subscription status and expiry.</p>
+<h2>5. Non-Goals (Explicit)</h2>
+<ul>
+<li><strong>No in-app job payments / escrow / commission</strong> — payment is cash, direct, offline; the platform is not a payment processor in v1.</li>
+<li><strong>No 3D Design Studio, renovations, or interior-design jobs</strong> — parked to Phase 2 (see brief addendum).</li>
+<li><strong>No two-mode (Rescue vs. Court) flows, tiered bids, live arrival/face-match, declared crew, gamified trust ladder, or in-app surge</strong> — all deferred.</li>
+<li><strong>Not a multi-community / national platform</strong> — single-community depth only.</li>
+<li><strong>Not a company/crew marketplace</strong> — solo independent tradesmen only.</li>
+<li><strong>No automated government CNIC verification integration</strong> — lightweight check in v1.</li>
+</ul>
+<h2>6. MVP Scope</h2>
+<h3>6.1 In Scope</h3>
+<ul>
+<li>Provider onboarding + light verification (CNIC + selfie), six Trades.</li>
+<li>Public provider profiles with persistent, cumulative Reputation (Rating, Adab Score, reviews, job count).</li>
+<li>Neighbor Social Proof (precinct-level usage count).</li>
+<li>Single job flow: post → providers bid (single price) → compare → award → connect offline.</li>
+<li>Post-job overall Rating + Adab Score; permanent reputation update.</li>
+<li>Resident-raised Disputes with founder-mediated, reputation-based resolution.</li>
+<li>Flat provider Subscription (with an initial free period to seed supply).</li>
+<li>Mobile app + web.</li>
+</ul>
+<h3>6.2 Out of Scope for MVP</h3>
+<p>The broad "not building / not becoming" list is §5 Non-Goals. The MVP-specific deferrals to call out:
+- <strong>3D Design Studio, renovations, interior designers</strong> → Phase 2. <code>[NOTE FOR PM: the emotionally load-bearing future feature; revisit first once the trust loop is proven.]</code>
+- All other parked mechanics (two-mode flows, tiered bids, advanced safety, gamified ladder, maintenance reminders, monetized design flow) → Phase 2+ (see brief addendum).</p>
+<h2>7. Success Metrics</h2>
+<p><strong>Primary</strong>
+- <strong>SM-1: Repeat usage (heartbeat).</strong> Share of Residents who post a 2nd+ Job within ~3–4 months of their first. Validates the core trust loop (FR-6…FR-14 plus FR-19…FR-22). Target TBD once baseline exists.
+- <strong>SM-2: Organic advocacy.</strong> Unprompted mentions/recommendations in Bahria Town WhatsApp groups and in-app referrals/vouch activity. Validates the trust thesis (FR-3, FR-5). Target: detectable, growing, unprompted.</p>
+<p><strong>Secondary</strong>
+- <strong>SM-3: Active earning supply.</strong> Count of Verified Providers completing repeat Jobs and retaining Subscriptions. Validates supply health (FR-1, FR-17). 
+- <strong>SM-4: Trust quality.</strong> High average overall Rating <em>and</em> a low rate of Legitimate–Unresolved Disputes. Validates the accountability engine (FR-13, FR-15, FR-16).
+- <strong>SM-5: Sustainability.</strong> Subscription revenue covers running costs ("pays for itself").</p>
+<p><strong>Counter-metrics (do not optimize)</strong>
+- <strong>SM-C1: Bid volume / lowest-price wins.</strong> Do <em>not</em> optimize for cheapest-bid-wins; it would resurrect the race to the bottom that reputation exists to prevent. Counterbalances SM-1/SM-3.
+- <strong>SM-C2: Onboarding speed at the cost of trust.</strong> Do <em>not</em> loosen verification just to grow supply faster; safety at job-time is the promise. Counterbalances SM-3.</p>
+<h2>8. Open Questions</h2>
+<ol>
+<li><strong>Flat fee amount.</strong> What is the monthly Subscription price after the 2-month free trial? (Trial length resolved: 2 months. Relates FR-17, FR-18.)</li>
+<li><strong>Subscription billing mechanism on no-code.</strong> Manual bank transfer, payment link, or a no-code-friendly recurring biller? (FR-18.)</li>
+<li><strong>Bid response window.</strong> How long is a Job Open before it expires or notifies the Resident that no one responded? (FR-7, FR-22, UJ-1 edge case.)</li>
+<li><strong>Completion confirmation.</strong> If a Resident never marks a Job Completed, what's the fallback (auto-prompt, provider-initiated, timeout)? (FR-12.)</li>
+<li><strong>Dispute tuning.</strong> The fairness model is set (right-to-respond, review-before-record, pattern weighting, resident-standing anti-abuse). Still to tune during build: the exact pattern threshold (FR-24), response-window length (FR-23), and what low Resident Standing actually does (FR-25).</li>
+</ol>
+<h2>9. Assumptions Index</h2>
+<ul>
+<li>§2.3 / FR-2 — v1 verification is a manual/lightweight founder check; no automated CNIC API.</li>
+<li>§4.2 / FR-4 — CNIC is unique per Provider and blocks duplicate accounts (prevents reputation reset).</li>
+<li>§4.3 / FR-7 — Exact address/contact shared only after a Provider is awarded the Job.</li>
+<li>§4.3 / FR-19 — Provider Availability is a toggle with auto-expiry after inactivity (window N) + per-job accept/decline; exact mechanism build-time tunable.</li>
+<li>§4.3 / FR-20 — SMS sent for provider job alerts only (cost control); per-SMS budget TBD.</li>
+<li>§4.3 / FR-22 — Concierge backstop is a manual admin workflow in v1; no-bid window build-time tunable.</li>
+<li>§4.3 / FR-21 — Response-time ETA is derived from observed Bid response times and not shown until a baseline exists.</li>
+<li>§4.4 / FR-9 — Default bid presentation surfaces reputation alongside price, not pure lowest-price sort.</li>
+<li>§4.5 / FR-12 — Resident marks completion; possible auto-prompt fallback after a set period.</li>
+<li>§4.6 / FR-24 — Pattern threshold/weighting for damaging disputes is a tunable rule set during build.</li>
+<li>§4.6 / FR-25 — The effect of low Resident Standing is a tunable rule; v1 may start by simply tracking it.</li>
+<li>§4.7 / FR-17 — Free trial is 2 months per Provider; flat fee amount is TBD.</li>
+<li>§4.7 / FR-18 — Subscription collected via a simple/manual method given the no-code build.</li>
+</ul>
+<h2>10. Constraints and Guardrails</h2>
+<p><strong>Platform.</strong> Mobile app + web, built by a solo non-technical founder on a <strong>no-code platform (Bubble — chosen in the architecture phase)</strong>. This caps technical complexity: favors profiles, listings, forms, ratings, and simple workflows; rules out (for v1) real-time mapping, 3D rendering, face-matching, and heavy automation. Real-time is intentionally degraded to <strong>periodic refresh + push/SMS notifications</strong>. Scope is intentionally aligned to what no-code delivers reliably. (See the architecture document for the full data model, integrity rules, and build order.)</p>
+<p><strong>Privacy &amp; data (Safety).</strong> The platform stores sensitive identity data (CNIC number, selfie). Guardrails: this data is admin-only, never shown publicly on profiles, used solely for Verification, and stored with access restricted to the founder/admin. <code>[NOTE FOR PM: confirm a basic retention/handling stance before launch — even a passion project handling national ID data should be deliberate.]</code></p>
+<p><strong>Cost.</strong> Single-founder economics: running costs must be coverable by Subscription revenue (SM-5). Avoid features that introduce per-job platform cost (e.g., payment processing) in v1.</p>
+<p><strong>Operational.</strong> Verification, Dispute resolution, and the empty-marketplace <strong>concierge backstop</strong> (FR-22) are <strong>founder-operated manual processes</strong> in v1. Acceptable at small single-community scale; a known throughput constraint as volume grows.</p>
+<p><strong>Localization &amp; Accessibility (Urdu/English, low-tech users).</strong> Lock now (cheap to set, costly to retrofit): <strong>Western Arabic numerals (1, 2, 3) app-wide</strong> for all PKR amounts and times (never mixed with Eastern Arabic-Indic digits); currency always reads <strong><code>Rs 1,500</code></strong> (never a bare number or <code>$</code>); <strong>status labels paired with a fixed Urdu translation</strong> in one table (no drift across the three apps); <strong>icon + text, never icon alone</strong> for statuses and Adab scores; generous tap targets for budget Android one-thumb use. Empty states must reassure (not blame the user), and "panic-moment" notifications (cancellation, dispute, no-response) use a calm, human tone with a clear next step.</p></body></html>

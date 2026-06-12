@@ -1,0 +1,95 @@
+# generated: 2026-06-12
+# last_updated: 2026-06-12
+# project: bahria-tenders
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+#
+# BUILD TARGET: poc-spec-2026-06-12.md (POC-as-Phase-0, Supabase + Expo — Bubble superseded).
+# Stories below were authored against the v1/Bubble epics; per-story "POC:" comments map them
+# to the 2026-06-12 re-scope. "POC: deferred" stories stay in backlog until the POC gate decision.
+# Bubble-specific mechanics translate via architecture.md "Platform Revision" table.
+# NOTE: one POC work item has no epic story yet (create via create-story before dev):
+#   - founder account-provisioning script / phone+PIN auth wiring (replaces OTP in 1-4 — fold into the 1-4 story when created)
+# (env setup + FCM spike: covered by story 1-1-environment-setup-and-fcm-spike, created 2026-06-12)
+#
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-06-12
+last_updated: 2026-06-12
+project: bahria-tenders
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
+development_status:
+  # Milestone 0 (Wizard-of-Oz concierge) — SUPERSEDED 2026-06-12: the POC itself is Phase 0.
+
+  epic-1: in-progress # POC: reduced — schema/privacy/auth foundation; no Bubble, no CNIC
+  1-1-environment-setup-and-fcm-spike: in-progress # POC: IN SCOPE — replaces superseded Bubble story 1.1; Wk1 GO/NO-GO gate (story file created 2026-06-12)
+  1-2-define-the-full-core-data-model-skeleton: backlog # POC: IN SCOPE (translated) — 7-table Postgres schema, enums, UNIQUE phone E.164, migrations
+  1-3-lock-restrictive-first-privacy-rules: backlog # POC: IN SCOPE (translated) — deny-by-default RLS, write-once ratings, pgTAP suite before UI
+  1-4-provider-sign-up: backlog # POC: reduced — founder-provisioned phone+PIN accounts (no OTP, no CNIC/selfie)
+  1-5-cnic-phone-uniqueness-gate: backlog # POC: partial — phone uniqueness lands in 1-2 as a DB constraint; CNIC side deferred (first item post-POC)
+  1-6-admin-verification-post-verify-purge: backlog # POC: deferred — verified_by_admin flag set in Supabase Studio
+  epic-1-retrospective: optional
+
+  epic-2: backlog # POC: CORE — the demand loop is the product
+  2-1-post-a-job: backlog # POC: IN SCOPE
+  2-2-provider-availability-signal: backlog # POC: deferred — simple feed + pull-to-refresh instead
+  2-3-provider-job-discovery: backlog # POC: IN SCOPE
+  2-4-submit-a-bid-with-subscription-gate-check: backlog # POC: IN SCOPE reduced — single bid w/ UNIQUE(job_id,provider_id); no subscription gate (all free)
+  2-5-broadcast-provider-notifications-backend: backlog # POC: IN SCOPE reduced — push-only via dispatcher interface + notification_log; SMS post-POC
+  2-6-supply-aware-expectation-setting: backlog # POC: deferred
+  2-7-empty-state-capture-concierge-backstop: backlog # POC: deferred — founder watches "unaccepted jobs" Studio view + WhatsApp fallback
+  2-8-compare-bids-award: backlog # POC: IN SCOPE reduced — stars + completed-job count only (no Adab/social proof on card)
+  2-9-offline-completion-mark-complete: backlog # POC: IN SCOPE
+  epic-2-retrospective: optional
+
+  epic-3: backlog # POC: reduced — write-once rating + aggregates only
+  3-1-rate-the-result: backlog # POC: IN SCOPE
+  3-2-adab-score: backlog # POC: deferred
+  3-3-reputation-aggregation-recompute: backlog # POC: IN SCOPE (translated) — SECURITY DEFINER fn increments + admin recompute SQL
+  3-4-humanized-provider-card-profile: backlog # POC: deferred — simple card (stars + job count) ships inside 2-8
+  3-5-neighbor-social-proof: backlog # POC: deferred
+  epic-3-retrospective: optional
+
+  epic-4: backlog # POC: deferred entirely — founder WhatsApp + manual disputes logging via Studio
+  4-1-raise-a-dispute: backlog # POC: deferred
+  4-2-provider-right-to-respond: backlog # POC: deferred
+  4-3-founder-adjudication-reputation-impact: backlog # POC: deferred
+  4-4-pattern-weighting: backlog # POC: deferred
+  4-5-resident-standing-anti-abuse: backlog # POC: deferred
+  epic-4-retrospective: optional
+
+  epic-5: backlog # POC: deferred entirely — providers free during POC
+  5-1-subscription-status-tracking: backlog # POC: deferred
+  5-2-trial-expiry-flagging-gate-enforcement: backlog # POC: deferred
+  epic-5-retrospective: optional
