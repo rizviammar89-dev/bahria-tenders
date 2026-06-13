@@ -13,6 +13,7 @@ supabase/.branches/
 
 # Env & secrets — never commit; FCM V1 service-account JSON lives ONLY in EAS credentials
 .env*
+!.env.example
 *service-account*.json
 
 # OS / editor

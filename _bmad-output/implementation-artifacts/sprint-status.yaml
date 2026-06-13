@@ -56,7 +56,7 @@ development_status:
   1-1-environment-setup-and-fcm-spike: in-progress # POC: IN SCOPE — replaces superseded Bubble story 1.1; Wk1 GO/NO-GO gate (story file created 2026-06-12)
   1-2-core-data-model-schema: done # POC: IN SCOPE (translated) — 7-table schema, enums, integrity constraints; code-reviewed + hardened (composite award FK, jobs CHECKs); 44 pgTAP green (2026-06-12)
   1-3-rls-and-grants: done # POC: IN SCOPE — RLS, grants, write-once ratings, reputation lockdown, cross-row rules; code-reviewed + hardened (column-scoped grants, bid freeze); 75 pgTAP green (2026-06-12)
-  1-4-provider-sign-up: backlog # POC: reduced — founder-provisioned phone+PIN accounts (no OTP, no CNIC/selfie)
+  1-4-auth-phone-pin: review # POC: reduced — founder-provisioned phone+PIN (synthetic email), login + gate + provisioning script; 11 jest + 75 pgTAP green, script integration-verified (dev complete 2026-06-12; device E2E login = manual smoke)
   1-5-cnic-phone-uniqueness-gate: backlog # POC: partial — phone uniqueness lands in 1-2 as a DB constraint; CNIC side deferred (first item post-POC)
   1-6-admin-verification-post-verify-purge: backlog # POC: deferred — verified_by_admin flag set in Supabase Studio
   epic-1-retrospective: optional
