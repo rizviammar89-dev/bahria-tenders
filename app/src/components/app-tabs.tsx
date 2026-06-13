@@ -29,6 +29,15 @@ export default function AppTabs() {
         />
       </NativeTabs.Trigger>
 
+      <NativeTabs.Trigger name="jobs-feed">
+        <NativeTabs.Trigger.Label>Jobs</NativeTabs.Trigger.Label>
+        {/* Story 2.3: placeholder icon (reuses explore.png) until a dedicated asset exists. */}
+        <NativeTabs.Trigger.Icon
+          src={require('@/assets/images/tabIcons/explore.png')}
+          renderingMode="template"
+        />
+      </NativeTabs.Trigger>
+
       <NativeTabs.Trigger name="explore">
         <NativeTabs.Trigger.Label>Push Spike</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon

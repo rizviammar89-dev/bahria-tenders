@@ -42,3 +42,42 @@ export async function createJob(input: {
   });
   return { error: error ? error.message : null };
 }
+
+export type OpenJob = {
+  id: string;
+  description: string;
+  precinct: string;
+  created_at: string;
+  service: { display_en: string; display_ur: string } | null;
+};
+
+/**
+ * Open jobs the signed-in provider should see: status 'open', in a trade they offer,
+ * not their own. RLS is the security backstop; the trade/own filters are relevance.
+ * A resident (or trade-less provider) gets an empty feed — benign, not an error.
+ */
+export async function fetchOpenJobsForMyTrades(): Promise<{ jobs: OpenJob[]; error: string | null }> {
+  const { data: userData } = await supabase.auth.getUser();
+  const uid = userData.user?.id;
+  if (!uid) return { jobs: [], error: 'You are not signed in.' };
+
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role, service_ids')
+    .eq('id', uid)
+    .single();
+  if (profileError || !profile) return { jobs: [], error: profileError?.message ?? null };
+  if (profile.role !== 'provider' || !profile.service_ids?.length) {
+    return { jobs: [], error: null };
+  }
+
+  const { data, error } = await supabase
+    .from('jobs')
+    .select('id, description, precinct, created_at, service:services(display_en, display_ur)')
+    .eq('status', 'open')
+    .in('service_id', profile.service_ids as string[])
+    .neq('resident_id', uid)
+    .order('created_at', { ascending: false });
+  if (error) return { jobs: [], error: error.message };
+  return { jobs: (data ?? []) as unknown as OpenJob[], error: null };
+}
