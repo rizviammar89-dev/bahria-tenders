@@ -54,7 +54,7 @@ development_status:
 
   epic-1: in-progress # POC: reduced — schema/privacy/auth foundation; no Bubble, no CNIC
   1-1-environment-setup-and-fcm-spike: in-progress # POC: IN SCOPE — replaces superseded Bubble story 1.1; Wk1 GO/NO-GO gate (story file created 2026-06-12)
-  1-2-define-the-full-core-data-model-skeleton: backlog # POC: IN SCOPE (translated) — 7-table Postgres schema, enums, UNIQUE phone E.164, migrations
+  1-2-core-data-model-schema: review # POC: IN SCOPE (translated) — 7-table Postgres schema, enums, UNIQUE phone E.164, migrations (dev complete 2026-06-12, 38 pgTAP green)
   1-3-lock-restrictive-first-privacy-rules: backlog # POC: IN SCOPE (translated) — deny-by-default RLS, write-once ratings, pgTAP suite before UI
   1-4-provider-sign-up: backlog # POC: reduced — founder-provisioned phone+PIN accounts (no OTP, no CNIC/selfie)
   1-5-cnic-phone-uniqueness-gate: backlog # POC: partial — phone uniqueness lands in 1-2 as a DB constraint; CNIC side deferred (first item post-POC)
