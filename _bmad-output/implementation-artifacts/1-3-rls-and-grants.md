@@ -4,7 +4,7 @@ baseline_commit: 3e959a838c22264f43068d6b606aff66566c0244
 
 # Story 1.3: Row-Level Security, Grants & Integrity Lockdown
 
-Status: review
+Status: done
 
 <!-- Translates the Bubble-era epic story 1.3 ("Lock restrictive-first privacy rules") to Supabase RLS + Postgres GRANTs. This is the POC security keystone: it makes the Story 1.2 tables safe to expose to the client, enforces the day-one "reputation is server-side-only / ratings are write-once" integrity rules, and lands the cross-row rules deferred from 1.2 (resident-can't-bid-own-job, rating attribution). -->
 
@@ -99,6 +99,29 @@ so that no client can read another household's contact details, forge reputation
 - [Source: _bmad-output/planning-artifacts/epics.md#Story-1.3] — superseded Bubble "restrictive-first privacy rules" story this translates
 - [Source: _bmad-output/implementation-artifacts/deferred-work.md] — the two cross-row items (resident-bid-own-job, rating attribution) this story closes
 - [Source: _bmad-output/implementation-artifacts/1-2-core-data-model-schema.md] — the schema being secured; config.toml note that new tables need explicit grants; `supabase test db` harness proven; auth.users fixture insert pattern (reused for RLS fixtures)
+
+### Review Findings (code review 2026-06-12)
+
+Acceptance Auditor: **ACCEPT** (all 10 ACs literally met). Both hunters independently caught a real least-privilege gap the literal AC text didn't mandate: **UPDATE grants on `jobs`/`bids` are full-table** (unlike `profiles` which is column-scoped), and `bids_update_own` has **no job-status guard**.
+
+**Decision needed:** (resolved → DEFER, founder)
+- [x] [Review][Decision] Job state-machine ordering → **DEFERRED to Epic 2 (Stories 2.8 award / 2.9 mark-complete)**, logged in deferred-work.md. Residual POC risk low (composite FK binds award to a real bidder; founder-vetted residents; resident legitimately drives transitions).
+
+**Patch (applied 2026-06-12):**
+- [x] [Review][Patch] Column-scoped UPDATE grants — `jobs` → `(status, awarded_provider_id, cancelled_at)`, `bids` → `(price_pkr, note, updated_at)`. Immutable-field tamper now blocked (proven: job `service_id` and bid `job_id` updates → 42501).
+- [x] [Review][Patch] `bids_update_own` job-open guard — bids freeze after award (proven: edit on awarded job J2 affects 0 rows; price unchanged).
+- [x] [Review][Patch] Test hardening — positive open-job SELECT (false-green fixed), bid-freeze, immutable-column tamper, 3 dispute assertions added. Suite now 75 tests green.
+
+**Deferred (real, owned by a later story):**
+- [x] [Review][Defer] Profiles SELECT exposes `full_name`/`precinct` to every authenticated user — intended for provider-card discovery; phone (the real PII) already locked. Tighten to counterparties post-POC.
+- [x] [Review][Defer] `service_ids` self-claimable (a provider can list any trade) — acceptable at POC scale (founder vets all ~20 providers); validate post-POC.
+- [x] [Review][Defer] Awarded provider can see losing bids post-award — design choice, not a trust invariant; revisit in marketplace-fairness work.
+- [x] [Review][Defer] service_role bypass tested only on profiles — add full-table service_role coverage when convenient.
+
+**Dismissed (false positive / handled):**
+- "bids policy lacks uniqueness" — UNIQUE(job_id,provider_id) exists from Story 1.2 (Blind Hunter lacked schema context).
+- "disputes resident-isolation hole" — Edge Hunter retracted on re-read; `disputes_insert_own` correctly scopes to `j.resident_id = auth.uid()`.
+- "anon can introspect information_schema" — POC-acceptable; not a data path.
 
 ## Dev Agent Record
 

@@ -42,7 +42,10 @@ create policy profiles_update_own on public.profiles
 -- ============================================================
 -- jobs — resident-owned; providers see open jobs
 -- ============================================================
-grant select, insert, update on public.jobs to authenticated;
+grant select, insert on public.jobs to authenticated;
+-- Column-scoped UPDATE: only the transition fields (resident drives award/complete/cancel).
+-- resident_id/service_id/description/precinct are immutable post-creation.
+grant update (status, awarded_provider_id, cancelled_at) on public.jobs to authenticated;
 
 create policy jobs_select_visible on public.jobs
   for select to authenticated
@@ -56,7 +59,9 @@ create policy jobs_update_own on public.jobs
 -- ============================================================
 -- bids — provider-owned; cannot bid on own job; verified providers only
 -- ============================================================
-grant select, insert, update on public.bids to authenticated;
+grant select, insert on public.bids to authenticated;
+-- Column-scoped UPDATE: only price/note are editable; job_id/provider_id are immutable.
+grant update (price_pkr, note, updated_at) on public.bids to authenticated;
 
 create policy bids_select_party on public.bids
   for select to authenticated
@@ -77,8 +82,15 @@ create policy bids_insert_provider on public.bids
       where j.id = bids.job_id and j.status = 'open' and j.resident_id <> auth.uid()
     )
   );
+-- A provider edits only their own bid, and ONLY while the job is still open
+-- (bids freeze once the job is awarded/completed).
 create policy bids_update_own on public.bids
-  for update to authenticated using (provider_id = auth.uid()) with check (provider_id = auth.uid());
+  for update to authenticated
+  using (
+    provider_id = auth.uid()
+    and exists (select 1 from public.jobs j where j.id = bids.job_id and j.status = 'open')
+  )
+  with check (provider_id = auth.uid());
 -- No client DELETE.
 
 -- ============================================================

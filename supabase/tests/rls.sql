@@ -146,6 +146,19 @@ select throws_ok(
     (''aaaa0000-0000-0000-0000-000000000001'',''66666666-6666-6666-6666-666666666666'',1200)',
   '42501', null, 'an unverified provider cannot bid');
 reset role;
+-- bid freeze: provider P cannot edit their bid on the AWARDED/completed job J2 (status != open)
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"22222222-2222-2222-2222-222222222222","role":"authenticated"}', true);
+select lives_ok(
+  'update public.bids set price_pkr = 1 where job_id = ''aaaa0000-0000-0000-0000-000000000002''',
+  'editing a bid on a non-open job does not error (RLS skips the row)');
+select throws_ok(
+  'update public.bids set job_id = ''aaaa0000-0000-0000-0000-000000000001'' where provider_id = auth.uid()',
+  '42501', null, 'a provider cannot tamper with a bid''s job_id (column not granted)');
+reset role;
+-- the frozen bid was NOT changed
+select is((select price_pkr from public.bids where job_id='aaaa0000-0000-0000-0000-000000000002'),
+          2000, 'bid on an awarded job was not re-priced');
 
 -- ============================================================
 -- jobs: cross-tenant isolation
@@ -155,10 +168,22 @@ select set_config('request.jwt.claims', '{"sub":"55555555-5555-5555-5555-5555555
 select is_empty(
   'select 1 from public.jobs where id = ''aaaa0000-0000-0000-0000-000000000002''',
   'resident B cannot see resident A''s completed (non-open) job');
+-- positive: the status='open' grant branch actually WORKS (guards against a false-green deny-all policy)
+select isnt_empty(
+  'select 1 from public.jobs where id = ''aaaa0000-0000-0000-0000-000000000001''',
+  'any authenticated user CAN see an open job (the feed)');
 select throws_ok(
   'insert into public.jobs (resident_id, service_id, description, precinct)
    select ''11111111-1111-1111-1111-111111111111'', s.id, ''forged'', ''P10'' from public.services s where s.slug=''plumber''',
   '42501', null, 'a resident cannot post a job as another resident');
+reset role;
+-- a resident cannot tamper with an immutable job field (service_id not in the update grant)
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
+select throws_ok(
+  'update public.jobs set service_id = (select id from public.services where slug=''painter'')
+     where id = ''aaaa0000-0000-0000-0000-000000000001''',
+  '42501', null, 'a resident cannot change a job''s service_id (column not granted)');
 reset role;
 
 -- ============================================================
@@ -179,6 +204,28 @@ select set_config('request.jwt.claims', '{"sub":"11111111-1111-1111-1111-1111111
 select is_empty(
   'select 1 from public.notification_log where recipient_id = ''22222222-2222-2222-2222-222222222222''',
   'a user cannot read another user''s notifications');
+reset role;
+
+-- ============================================================
+-- disputes: resident-raise on own completed job; clients cannot mutate
+-- ============================================================
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
+select lives_ok(
+  'insert into public.disputes (job_id, raised_by, reason) values
+    (''aaaa0000-0000-0000-0000-000000000002'',''11111111-1111-1111-1111-111111111111'',''sloppy work'')',
+  'the hiring resident can raise a dispute on their own completed job');
+select throws_ok(
+  'update public.disputes set status = ''not_upheld'' where raised_by = auth.uid()',
+  '42501', null, 'a client cannot adjudicate a dispute (no update grant)');
+reset role;
+-- a non-party resident cannot raise a dispute on someone else''s job
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"55555555-5555-5555-5555-555555555555","role":"authenticated"}', true);
+select throws_ok(
+  'insert into public.disputes (job_id, raised_by, reason) values
+    (''aaaa0000-0000-0000-0000-000000000002'',''55555555-5555-5555-5555-555555555555'',''not mine'')',
+  '42501', null, 'a non-hiring resident cannot raise a dispute on another''s job');
 reset role;
 
 -- ============================================================
