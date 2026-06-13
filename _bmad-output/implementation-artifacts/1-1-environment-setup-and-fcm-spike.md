@@ -1,10 +1,10 @@
 ---
-baseline_commit: NO_VCS
+baseline_commit: 5dea1160076411d5409127b9e290c4a5c4d7d970
 ---
 
 # Story 1.1: Environment Setup & FCM-on-Budget-Android Push Spike
 
-Status: ready-for-dev
+Status: in-progress (blocked on founder manual steps — see Completion Notes)
 
 <!-- Replaces superseded Bubble story 1.1 ("Create the Bubble app & confirm plan capabilities") per the 2026-06-12 platform pivot — same role: stand up the foundation and confirm the platform's load-bearing capabilities before feature work. This story is the POC Week-1 GO/NO-GO gate (poc-spec-2026-06-12.md §7). -->
 
@@ -26,30 +26,30 @@ so that the riskiest platform assumption (push-as-doorbell for provider job aler
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Toolchain (AC-1)
-  - [ ] Install Node 24 LTS (`winget install OpenJS.NodeJS.LTS`), verify ≥ 24
-  - [ ] `npm install -g pnpm` (v11), `pnpm add -g eas-cli`
-  - [ ] Install Scoop, then `scoop bucket add supabase https://github.com/supabase/scoop-bucket.git; scoop install supabase`
-  - [ ] `git init` at `C:\Users\Ammar\Documents\bahria-tenders`, add `.gitignore`, first commit of existing docs
-- [ ] Task 2: Local Supabase (AC-2, AC-3)
-  - [ ] `supabase init` at repo root → `supabase/` directory
-  - [ ] `supabase start` (first run pulls ~2–3 GB of images; needs Docker Desktop running)
-  - [ ] Open Studio at localhost:54323, confirm healthy
-  - [ ] Write `supabase/tests/smoke.sql`, run `supabase test db`, confirm green
-- [ ] Task 3: Expo scaffold (AC-4)
-  - [ ] `npx create-expo-app@latest app --template default@sdk-56` (the `@sdk-56` flag is REQUIRED — bare command currently scaffolds SDK 54)
-  - [ ] `pnpm start` in `app/`, open in Expo Go on the dev phone, confirm tabs render
-- [ ] Task 4: FCM credentials + dev build (AC-5)
-  - [ ] Firebase console: new project `bahria-tenders` → Android app → download `google-services.json` into `app/`
-  - [ ] `app.json`: set `expo.android.googleServicesFile`, `expo.android.package` (e.g. `com.bahriatenders.app`), add `expo-notifications` plugin
-  - [ ] `pnpm expo install expo-notifications expo-device expo-constants`
-  - [ ] Firebase → Project settings → Service accounts → Generate New Private Key (FCM V1 JSON) → upload via `eas credentials` (Android → push notifications)
-  - [ ] `eas build --profile development --platform android` (cloud build, free tier ~15 Android builds/mo) → install APK on the budget device
-- [ ] Task 5: Push spike + verdict (AC-6, AC-7)
-  - [ ] Minimal token screen: request notification permission, log `getExpoPushTokenAsync({ projectId })` token
-  - [ ] Send test pushes via `curl https://exp.host/--/api/v2/push/send` with the token
-  - [ ] Run the 12h-backgrounded test twice: default battery settings, then with optimization disabled for the app
-  - [ ] Record outcomes + GO/NO-GO verdict in Dev Agent Record; update sprint status notes
+- [x] Task 1: Toolchain (AC-1)
+  - [x] Install Node 24 LTS (`winget install OpenJS.NodeJS.LTS`), verify ≥ 24 → v24.16.0
+  - [x] `npm install -g pnpm` (v11) → 11.6.0; `npm install -g eas-cli` → eas-cli/20.1.0
+  - [x] Install Scoop, then `scoop bucket add supabase …; scoop install supabase` → CLI 2.106.0
+  - [x] `git init`, add `.gitignore`, first commit of existing docs → commit 5dea116
+- [x] Task 2: Local Supabase (AC-2, AC-3)
+  - [x] `supabase init` at repo root → `supabase/` directory
+  - [x] `supabase start` (pulled images; Docker Desktop running) → exit 0
+  - [x] Studio healthy at http://127.0.0.1:54323 (API 54321, DB 54322; imgproxy/pooler stopped = optional, not needed)
+  - [x] Write `supabase/tests/smoke.sql`, run `supabase test db` → Result: PASS (1 test)
+- [x] Task 3: Expo scaffold (AC-4)
+  - [x] `npx create-expo-app@latest app --template default@sdk-56` → expo ~56.0.11, Expo Router + TS
+  - [~] `pnpm start` + open in Expo Go on dev phone → **MANUAL (needs physical device)**; code verified via `tsc --noEmit` + `expo lint` (both green)
+- [ ] Task 4: FCM credentials + dev build (AC-5) — **BLOCKED: needs Firebase + Expo accounts + device (founder)**
+  - [x] `app.json`: `expo.android.googleServicesFile`, `expo.android.package` (`com.bahriatenders.app`), `expo-notifications` plugin added
+  - [x] `pnpm expo install expo-notifications expo-device expo-constants` (+ expo-dev-client)
+  - [ ] Firebase console: new project → Android app → download `google-services.json` into `app/` — **MANUAL**
+  - [ ] Firebase → Service accounts → Generate FCM V1 Private Key → upload via `eas credentials` — **MANUAL**
+  - [ ] `eas build --profile development --platform android` → install APK on budget device — **MANUAL** (needs `eas login` + `eas init`)
+- [ ] Task 5: Push spike + verdict (AC-6, AC-7) — **BLOCKED: needs dev build + device + 12h wait (founder)**
+  - [x] Token screen + `registerForPushAsync` (`getExpoPushTokenAsync({ projectId })`, Android-13+ channel-first) — code complete
+  - [ ] Send test pushes via `https://exp.host/--/api/v2/push/send` — **MANUAL** (after dev build installed)
+  - [ ] Run the 12h-backgrounded test twice (default vs optimization-disabled) — **MANUAL**
+  - [ ] Record outcomes + GO/NO-GO verdict; update sprint status — **MANUAL**
 
 ## Dev Notes
 
@@ -81,11 +81,47 @@ so that the riskiest platform assumption (push-as-doorbell for provider job aler
 
 ### Agent Model Used
 
+claude-opus-4-8 (Amelia / dev-story)
+
 ### Debug Log References
+
+- `node --version` → v24.16.0; `pnpm --version` → 11.6.0; `eas --version` → eas-cli/20.1.0; `supabase --version` → 2.106.0
+- `supabase test db` → `smoke.sql .. ok / All tests successful / Result: PASS`
+- `npx tsc --noEmit` → clean (after generating `expo-env.d.ts`, which the template creates on first `expo start`)
+- `npx expo lint` → clean (after one targeted eslint-disable on the scaffold's `use-color-scheme.web.ts` hydration hook)
 
 ### Completion Notes List
 
+**Automatable scope COMPLETE and verified (AC-1, AC-2, AC-3, AC-4 code):**
+- Full toolchain installed; local Supabase stack runs on native Windows + Docker Desktop via Scoop CLI (WSL2 NOT needed — earlier assumption corrected).
+- pgTAP harness proven green — this is the foundation Story 1.3's RLS tests build on.
+- Expo SDK 56 app scaffolds, typechecks, and lints clean. Push spike code written against the **verified v56 API**, including a requirement my pre-story research missed: on Android 13+ `setNotificationChannelAsync` must run **before** `getExpoPushTokenAsync` (handled in `src/lib/push.ts`).
+- Used Expo push service (not raw FCM) per Dev Notes; `setNotificationHandler` uses the SDK-56 `shouldShowBanner`/`shouldShowList` shape (not deprecated `shouldShowAlert`).
+
+**⚠️ HALT — remaining ACs require the founder (cannot be done autonomously):** AC-5, AC-6, AC-7 depend on interactive accounts, a physical device, and a 12-hour observation window. These were flagged as manual in the story Dev Notes from the start. **Precise founder checklist:**
+1. **Firebase:** create a project → add an Android app with package `com.bahriatenders.app` → download `google-services.json` into `app/` (safe to commit). Then Project settings → Service accounts → *Generate new private key* (FCM V1 JSON — this is a SECRET, do not commit).
+2. **EAS:** `cd app; eas login` (free Expo account); `eas init` (sets the `projectId` the token code reads); `eas credentials` → Android → Push Notifications → upload the V1 service-account JSON.
+3. **Build:** `eas build --profile development --platform android` → install the APK on a **real budget Android** (Redmi/Tecno/Infinix — not an emulator, not a flagship).
+4. **Spike (the GO/NO-GO):** open the app → "Push Spike" tab → *Register for push* → copy the Expo token. Send a test push:
+   `curl -H "Content-Type: application/json" -X POST "https://exp.host/--/api/v2/push/send" -d '{"to":"<ExpoPushToken>","title":"Job alert","body":"New plumber job in your area"}'`
+   Background the app, screen off, wait ~12h, confirm arrival. Repeat with battery optimization disabled for the app. Fill the Spike Results table + verdict below.
+5. **If NO-GO:** push is unreliable on the target device class → SMS must come back into POC scope (founder decision; see poc-spec §5 SMS deferral).
+
+**Note for reviewer:** the `app.json` references `./google-services.json`, which does not exist until step 1 — `eas build`/`expo prebuild` will fail until the founder adds it. This is expected, not a defect.
+
 ### File List
+
+- `.gitignore` (NEW) — root ignore incl. secrets/`*service-account*.json`
+- `supabase/` (NEW, CLI-generated) — `config.toml`, `.gitignore`
+- `supabase/tests/smoke.sql` (NEW) — pgTAP harness proof (AC-3)
+- `app/` (NEW) — Expo SDK 56 scaffold (full tree)
+- `app/app.json` (MODIFIED) — name/slug, android package + googleServicesFile, expo-notifications plugin
+- `app/expo-env.d.ts` (NEW) — standard Expo type reference (CSS module decls for tsc)
+- `app/src/lib/push.ts` (NEW) — `registerForPushAsync` push-token helper (AC-6 code)
+- `app/src/app/explore.tsx` (MODIFIED) — repurposed Explore tab into the Push Spike screen
+- `app/src/app/_layout.tsx` (MODIFIED) — foreground notification handler
+- `app/src/components/app-tabs.tsx` (MODIFIED) — tab label "Explore" → "Push Spike"
+- `app/src/hooks/use-color-scheme.web.ts` (MODIFIED) — targeted eslint-disable for intended hydration setState
 
 ### Spike Results (AC-6/AC-7 — fill during execution)
 
