@@ -52,7 +52,12 @@ create table public.jobs (
   status              public.job_status not null default 'open',
   awarded_provider_id uuid references public.profiles (id),
   created_at          timestamptz not null default now(),
-  cancelled_at        timestamptz
+  cancelled_at        timestamptz,
+  -- Single-row consistency: status cannot contradict the award/cancel fields.
+  constraint jobs_cancel_consistency_chk
+    check ((cancelled_at is not null) = (status = 'cancelled')),
+  constraint jobs_awarded_requires_provider_chk
+    check (status not in ('awarded', 'completed') or awarded_provider_id is not null)
 );
 
 -- ============================================================
@@ -68,6 +73,14 @@ create table public.bids (
   updated_at  timestamptz not null default now(),
   constraint bids_one_per_provider_per_job unique (job_id, provider_id)
 );
+
+-- The awarded provider must be someone who actually bid on THIS job.
+-- Composite FK targets the bids unique key; awarded_provider_id is nullable, so
+-- MATCH SIMPLE skips the check while a job is still open/unawarded.
+alter table public.jobs
+  add constraint jobs_awarded_provider_bid_fk
+  foreign key (id, awarded_provider_id)
+  references public.bids (job_id, provider_id);
 
 -- ============================================================
 -- ratings (one per job; write-once enforced by RLS in Story 1.3)

@@ -4,7 +4,7 @@ baseline_commit: 4489d36b769f76a55539bde8e545ff79f98e8f4f
 
 # Story 1.2: Core Data-Model Schema (POC, 7 tables)
 
-Status: review
+Status: done
 
 <!-- Translates the Bubble-era epic story 1.2 ("Define the full core data-model skeleton") to the POC code stack (Supabase Postgres migrations). The Bubble-era "create the FULL skeleton now to avoid live-data migrations" rule is DROPPED — Postgres additive migrations are cheap (architecture.md Platform Revision), so this story builds only the POC-scope tables and defers the rest. -->
 
@@ -76,6 +76,31 @@ so that every later story writes against a stable, correct schema and the trust-
 - [Source: _bmad-output/planning-artifacts/prds/prd-bahria-tenders-2026-06-07/prd.md#3] — Glossary (the 6 v1 Trades; Job/Bid/Rating/Dispute definitions)
 - [Source: _bmad-output/planning-artifacts/epics.md#Story-1.2] — superseded Bubble skeleton story this translates
 - [Source: 1-1-environment-setup-and-fcm-spike.md] — env is up: `supabase test db` harness proven green; Studio at :54323; DB at 54322
+
+### Review Findings (code review 2026-06-12)
+
+Acceptance Auditor verdict: **PASS** — all 10 ACs genuinely met, no scope creep. Blind Hunter + Edge Case Hunter raised cross-row integrity and test-coverage items, triaged below.
+
+**Decision needed:** (both resolved → APPLIED 2026-06-12)
+- [x] [Review][Decision] Enforce `jobs.awarded_provider_id` is a real bidder — APPLIED: composite FK `jobs_awarded_provider_bid_fk (id, awarded_provider_id) references bids(job_id, provider_id)`. Proven by test (award-to-non-bidder → 23503, award-to-bidder → lives_ok).
+- [x] [Review][Decision] Single-row consistency CHECKs on `jobs` — APPLIED: `jobs_cancel_consistency_chk` and `jobs_awarded_requires_provider_chk`. Proven by test (bad cancel state → 23514).
+
+**Patch (applied):**
+- [x] [Review][Patch] pgTAP behavioral assertions added [supabase/tests/schema.sql]: valid rating inserts (lives_ok); duplicate `idempotency_key` rejected (23505); invalid enum rejected (22P02) — plus coverage for the two new constraints. Suite now 43 assertions, `supabase test db` → PASS (44 total).
+
+**Deferred (real, owned by a later story):**
+- [x] [Review][Defer] Resident can bid on own job — RLS (1.3) + bid Edge Function (2.4) enforce role/identity gating; schema has no single-row way to express it.
+- [x] [Review][Defer] Rating attribution (resident_id/provider_id must match the job's parties; job must be `completed`) — cross-row, owned by the rate flow (Story 3.1) + RLS (1.3); requires a trigger that 1.2 scoped out.
+- [x] [Review][Defer] `bids.updated_at` not auto-maintained — bid-edit flow (Story 2.4) maintains it / adds the trigger.
+- [x] [Review][Defer] Missing indexes on some FK columns (jobs.resident_id, disputes.job_id, notification_log.recipient_id) — add when Epic 2 query patterns land; negligible at POC scale.
+- [x] [Review][Defer] No dedup guard on identical job posts — product/app decision (Epic 2).
+
+**Dismissed (false positive or by-design):**
+- Phone regex "only admits 300–309" — FALSE POSITIVE; verified in Postgres that `^\+923[0-9]{9}$` admits all PK mobile prefixes (0300/0312/0333/0345/0399) and rejects the local `03…` format.
+- profiles/auth.users hard-delete cascade RESTRICT — by-design: architecture mandates soft-delete, never hard-delete the parent.
+- `service_ids uuid[]` no FK integrity — documented POC decision (join table is the post-POC normalization).
+- precinct free-text no FK — POC 7-table contract stores precinct as text deliberately.
+- `phone_verified_at` "orphaned" — intentional (founder-set now; real OTP post-POC).
 
 ## Dev Agent Record
 

@@ -1,7 +1,7 @@
 -- Story 1.2 (AC-9): structural assertions for the POC core schema.
 -- Runs inside a rolled-back transaction (supabase test db).
 begin;
-select plan(37);
+select plan(43);
 
 -- ---- Tables exist (AC-2..AC-8) ----
 select has_table('public', 'profiles', 'profiles table exists');
@@ -100,6 +100,54 @@ select throws_ok(
   '23514',
   null,
   'ratings.stars CHECK rejects out-of-range value');
+
+-- ---- Positive path + behavioral coverage (review hardening) ----
+
+-- A valid rating inserts cleanly
+select lives_ok(
+  $$ insert into public.ratings (job_id, provider_id, resident_id, stars, review)
+     values ('33333333-3333-3333-3333-333333333333', '22222222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-111111111111', 5, 'Great work') $$,
+  'a valid rating inserts');
+
+-- Duplicate idempotency_key is rejected (AC-7 behavioral)
+insert into public.notification_log (recipient_id, channel, idempotency_key)
+values ('22222222-2222-2222-2222-222222222222', 'push', 'job-333-prov-222');
+select throws_ok(
+  $$ insert into public.notification_log (recipient_id, channel, idempotency_key)
+     values ('22222222-2222-2222-2222-222222222222', 'push', 'job-333-prov-222') $$,
+  '23505',
+  null,
+  'notification_log UNIQUE(idempotency_key) rejects a duplicate send');
+
+-- Invalid enum value is rejected at cast time
+select throws_ok(
+  $$ select 'bogus'::public.job_status $$,
+  '22P02',
+  null,
+  'job_status enum rejects an unknown value');
+
+-- Award integrity (composite FK): awarding a provider who never bid is rejected
+select throws_ok(
+  $$ update public.jobs set status = 'awarded', awarded_provider_id = '11111111-1111-1111-1111-111111111111'
+     where id = '33333333-3333-3333-3333-333333333333' $$,
+  '23503', -- foreign_key_violation
+  null,
+  'jobs cannot be awarded to a provider who did not bid on the job');
+
+-- Award integrity: awarding the actual bidder (provider 222 bid 1500) succeeds
+select lives_ok(
+  $$ update public.jobs set status = 'awarded', awarded_provider_id = '22222222-2222-2222-2222-222222222222'
+     where id = '33333333-3333-3333-3333-333333333333' $$,
+  'a job can be awarded to a real bidder');
+
+-- jobs cancel-consistency CHECK: cancelled_at set without status='cancelled' is rejected
+select throws_ok(
+  $$ insert into public.jobs (resident_id, service_id, description, precinct, status, cancelled_at)
+     select '11111111-1111-1111-1111-111111111111', s.id, 'x', 'P10', 'open', now()
+     from public.services s where s.slug = 'plumber' $$,
+  '23514',
+  null,
+  'jobs cancel-consistency CHECK rejects cancelled_at without status=cancelled');
 
 select * from finish();
 rollback;
