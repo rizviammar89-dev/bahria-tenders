@@ -23,4 +23,11 @@ describe('timeAgo', () => {
   it('uses Western Arabic numerals only', () => {
     expect(timeAgo('2026-06-13T11:55:00Z', NOW)).toMatch(/^[0-9]/);
   });
+  it('clamps a future timestamp (clock skew) to "just now"', () => {
+    expect(timeAgo('2026-06-13T12:05:00Z', NOW)).toBe('just now');
+  });
+  it('returns empty string for an invalid ISO (never "NaN days ago")', () => {
+    expect(timeAgo('not-a-date', NOW)).toBe('');
+    expect(timeAgo('', NOW)).toBe('');
+  });
 });

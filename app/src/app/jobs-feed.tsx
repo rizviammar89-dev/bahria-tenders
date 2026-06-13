@@ -1,6 +1,6 @@
 // Story 2.3: Provider Job Discovery (FR-7). A verified provider sees open jobs in their
 // trades. RLS jobs_select_visible is the security backstop; the query filters to relevance.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -16,9 +16,12 @@ export default function JobsFeedScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [now, setNow] = useState(0); // stamped at load time (Date.now() is impure → keep it out of render)
+  const mounted = useRef(true);
 
+  // Single fetch path, used by both the initial load and pull-to-refresh.
   const load = useCallback(async () => {
     const { jobs: rows, error } = await fetchOpenJobsForMyTrades();
+    if (!mounted.current) return; // unmounted mid-fetch → don't setState
     setNow(Date.now());
     setLoadError(error ? "Couldn't load jobs — pull to refresh." : null);
     if (!error) setJobs(rows);
@@ -26,23 +29,22 @@ export default function JobsFeedScreen() {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    fetchOpenJobsForMyTrades().then(({ jobs: rows, error }) => {
-      if (cancelled) return;
-      setNow(Date.now());
-      setLoadError(error ? "Couldn't load jobs — pull to refresh." : null);
-      if (!error) setJobs(rows);
-      setLoaded(true);
-    });
+    mounted.current = true;
+    // Fetch-on-mount: load() only setStates after the await (in a callback), not synchronously.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
     return () => {
-      cancelled = true;
+      mounted.current = false;
     };
-  }, []);
+  }, [load]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await load();
-    setRefreshing(false);
+    try {
+      await load();
+    } finally {
+      if (mounted.current) setRefreshing(false);
+    }
   }, [load]);
 
   return (

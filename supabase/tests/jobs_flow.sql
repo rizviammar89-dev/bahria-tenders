@@ -44,6 +44,10 @@ from public.services s where s.slug = 'carpenter';
 insert into public.jobs (resident_id, service_id, description, precinct, status, cancelled_at)
 select '11111111-1111-1111-1111-111111111111', s.id, 'Cancelled carpentry', 'Precinct 10', 'cancelled', now()
 from public.services s where s.slug = 'carpenter';
+-- An OPEN carpenter job the provider posted themselves — must be excluded (resident_id <> me).
+insert into public.jobs (resident_id, service_id, description, precinct)
+select '22222222-2222-2222-2222-222222222222', s.id, 'My own carpentry', 'Precinct 10'
+from public.services s where s.slug = 'carpenter';
 
 -- The feed query, run AS the provider (mirrors the client: status=open, my trades, not my own).
 set local role authenticated;

@@ -8,6 +8,13 @@
 - **Missing indexes on some FK columns** — `jobs.resident_id`, `disputes.job_id`, `notification_log.recipient_id` are unindexed. Negligible at POC scale; add when Epic 2 query patterns are known.
 - **No dedup guard on identical job posts** — a resident can post the same service/precinct/description twice. Product/app-layer decision for Epic 2.
 
+## Deferred from: code review of story-2.3 (2026-06-12)
+
+- **Empty-`service_ids` provider guidance** — a provider who hasn't selected trades sees "No open jobs" with no nudge; show "Select your trades to see jobs." Owned by role-nav/provider-onboarding.
+- **Very-old-date cap in `timeAgo`** — no upper bound ("60 days ago"); cap or add job aging post-POC.
+- **Feed excludes already-bid jobs** — the provider feed shows jobs they've already bid on; refine in Story 2.4 (bidding) once bids exist.
+- **Feed loading indicator** — brief blank list before the first fetch resolves; add a loading state post-POC.
+
 ## Deferred from: code review of story-2.1 (2026-06-12)
 
 - **Role-gated navigation** — the "Post a Job" tab (and later provider screens) are visible to all authenticated users; a provider could post a job (RLS binds the row to them, so no security hole, but wrong UX). Build role-gated nav (residents: Post Job / My Jobs; providers: Feed / My Bids) as an Epic-2 cross-cutting task — likely a dedicated story before the demo. Also remove the 1.1 Push Spike tab from the shipping nav once the push gate is decided.

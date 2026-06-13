@@ -4,7 +4,7 @@ baseline_commit: 0654255ab39d437feabd4c27f64de780468a3a13
 
 # Story 2.3: Provider Job Discovery (FR-7)
 
-Status: review
+Status: done
 
 <!-- Epic 2 / demand loop — the provider side of the marketplace. Translates the Bubble-era epic story 2.3 (FR-7) to the POC stack: an Expo feed screen + Supabase select. Backend (jobs, services, jobs_select_visible RLS, profiles.service_ids) is DONE. Availability (Story 2.2 / FR-19) is POC-deferred, so the feed shows ALL open matching jobs with no availability filter. -->
 
@@ -79,6 +79,25 @@ so that I can choose which to bid on.
 - [Source: _bmad-output/implementation-artifacts/1-3-rls-and-grants.md] — `jobs_select_visible` (open OR own OR awarded); phone column withheld from clients; pgTAP auth-sim harness in `rls.sql`
 - [Source: _bmad-output/implementation-artifacts/2-1-post-a-job.md] — `jobs.ts` data-layer shape, `loadError`/empty/`useEffect` cancelled-guard patterns, `jobs_flow.sql`, the role-nav deferred item
 - [Source: _bmad-output/implementation-artifacts/deferred-work.md] — role-gated navigation (Epic-2 cross-cutting; recommend as the next story)
+
+### Review Findings (code review 2026-06-12)
+
+Acceptance Auditor: **ACCEPT** (all 6 ACs met, no violations, no scope creep). The hunters' headline finding (the `service:services(...)` embed shape) was settled empirically — it returns a single object, not an array — so it's a false positive. Remaining findings are cheap client/test hygiene.
+
+**Patch (applied 2026-06-12):**
+- [x] [Review][Patch] `time-ago.ts` — `Number.isNaN` guard (invalid ISO → '') + `Math.max(0, …)` clamp (future → "just now"); 2 new jest cases. 24 jest green.
+- [x] [Review][Patch] `jobs-feed.tsx` — single `load()` fetch path called by both mount + refresh; `mounted` ref guard makes both unmount-safe; `onRefresh` wrapped in `try/finally` (no stuck spinner). (Lint `set-state-in-effect` on the fetch-on-mount `load()` resolved with a targeted disable + rationale — load() only setStates post-await, matching the 1.1 hydration precedent.)
+- [x] [Review][Patch] `jobs_flow.sql` — added a provider-self-posted carpenter-OPEN job; the feed assertion still returns only 'Build a shelf', now genuinely exercising the `resident_id <> auth.uid()` exclusion. 78 pgTAP green.
+
+**Deferred (real, later story / post-POC):**
+- [x] [Review][Defer] Empty-`service_ids` provider sees "No open jobs" with no guidance ("select your trades…") — owned by role-nav/provider-onboarding.
+- [x] [Review][Defer] No cap on very old dates ("60 days ago") — post-POC; jobs are fresh at POC scale.
+- [x] [Review][Defer] Feed doesn't exclude jobs the provider already bid on — Story 2.4 (bidding) territory.
+- [x] [Review][Defer] Brief blank list during the very first load (no loading indicator) — minor UX; add a loading state post-POC.
+
+**Dismissed (false positive / cosmetic):**
+- `service:services(...)` embed "may be an array" — **verified empirically**: PostgREST returns a single object `{display_en, display_ur}` for the to-one `jobs.service_id → services` FK. Runtime matches `OpenJob.service`; the `as unknown` cast is a smell (the supabase-js inferred type is array-ish) but behavior is correct. Left with a clarifying comment.
+- pgTAP order ASC vs client DESC — immaterial for the single-row assertion; client DESC is trivially correct.
 
 ## Dev Agent Record
 
