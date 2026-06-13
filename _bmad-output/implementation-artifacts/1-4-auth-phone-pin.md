@@ -4,7 +4,7 @@ baseline_commit: 395378bfc09e5d7f88d8ae2c6067c38fae8ded38
 
 # Story 1.4: Founder-Provisioned Phone+PIN Authentication
 
-Status: review
+Status: done
 
 <!-- Translates the Bubble-era epic story 1.4 ("Provider sign-up", FR-1) to the POC's no-SMS, founder-onboards-everyone model (poc-spec §4, local-code-pivot). There is NO in-app self-signup and NO OTP in the POC: the founder provisions every account with a service_role script and hands the person a PIN; they log in with phone + PIN. Identity stays phone-keyed so the post-POC switch to real phone OTP is a backfill, not a migration. -->
 
@@ -93,7 +93,32 @@ so that the ~20 hand-picked POC users can authenticate without SMS/OTP, while th
 - [Source: _bmad-output/implementation-artifacts/1-1-environment-setup-and-fcm-spike.md] — Expo SDK 56 app (src/app/ routing, expo-router), `.env*` gitignored, `supabase status` keys/URL
 - External (verified 2026-06-12, sourced): supabase.com/docs/reference/javascript/auth-admin-createuser; .../auth-signinwithpassword; supabase.com/docs/guides/getting-started/tutorials/with-expo-react-native (storage adapter, AppState); docs.expo.dev/guides/environment-variables (EXPO_PUBLIC_, LAN-IP gotcha); docs.expo.dev/develop/unit-testing (jest-expo); npmjs.com/package/tsx
 
-## Dev Agent Record
+### Review Findings (code review 2026-06-12)
+
+Acceptance Auditor: **PASS** (all 7 ACs genuinely met, no scope creep, secrets safe, localization locks honored). Both hunters surfaced a real headline risk (PIN brute-force) + concrete defects, triaged below.
+
+**Decision needed:** (resolved → raise PIN to 6 digits + document, founder)
+- [x] [Review][Decision] 4-digit PIN brute-force → **APPLIED:** provisioning now requires `^\d{6,}$` (1M keyspace). Documented: POC also relies on Supabase IP rate-limiting; the post-POC phone-OTP migration removes PIN-as-sole-credential. Residual risk accepted for the ≈20 founder-vetted, non-public LAN cohort.
+
+**Patch (applied 2026-06-12):**
+- [x] [Review][Patch] `auth.tsx` — `getSession()` now `.catch(()=>setSession(null)).finally(()=>setLoading(false))`; a startup network error can no longer hang the gate at a blank screen.
+- [x] [Review][Patch] `provision_user.ts parseArgs` — a flag with a missing value now fails loudly (`Flag --pin requires a value.`); no silent `'true'`. Smoke-verified.
+- [x] [Review][Patch] login — empty/whitespace PIN guarded before the network call; phone trimmed.
+- [x] [Review][Patch] `provision_user.ts` — rollback `deleteUser` result checked (reports an orphan honestly if it fails); `--services` with `--role resident` now errors. Smoke-verified.
+- [x] [Review][Patch] `phone.test.ts` — added reject cases for `+9203…` and `00923…`; 12 jest tests green.
+
+**Deferred (real, owned by a later story / post-POC):**
+- [x] [Review][Defer] Stale-session-while-backgrounded → silent 401s (app shows logged-in UI, every query 401s). Needs a global query-error/401 handler — belongs with the data-fetching layer in Epic 2.
+- [x] [Review][Defer] Login error branching (network vs bad-creds both show "Phone or PIN is incorrect"). Acceptable calm copy for POC; add a connectivity-specific message with the Epic 2 data layer.
+- [x] [Review][Defer] Auth-gate loading skeleton (Gate returns `null`; splash-timing flicker). Minor UX; add a proper loading state post-POC.
+- [x] [Review][Defer] Synthetic-email enumerability — inherent to the no-SMS scheme; eliminated by the post-POC phone-OTP migration.
+- [x] [Review][Defer] PIN non-numeric input filter / unicode-digit phone input. Post-POC input hardening.
+- [x] [Review][Defer] `supabase.ts` module-load throw on missing env (fail-fast is acceptable for the POC; graceful degradation post-POC).
+
+**Dismissed (false positive / cosmetic / handled):**
+- "Spec named `login.tsx` but impl is a component + conditional render" — Acceptance Auditor confirmed cosmetic, disclosed, functionally equivalent.
+- "`busy` set before validation = flicker" — cosmetic; no network call on invalid phone.
+- "duplicate service slugs" — harmless (Set-deduped); FK/validation already resolved at insert.
 
 ### Agent Model Used
 

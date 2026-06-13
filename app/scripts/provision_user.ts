@@ -8,8 +8,10 @@
  *   cd app
  *   SUPABASE_URL=http://127.0.0.1:54321 SUPABASE_SERVICE_ROLE_KEY=<service_role key from `supabase status`> \
  *     npx tsx scripts/provision_user.ts \
- *     --phone 03001234567 --pin 1234 --role provider --name "Bilal Carpenter" \
+ *     --phone 03001234567 --pin 123456 --role provider --name "Bilal Carpenter" \
  *     --precinct "Precinct 10" --services carpenter,painter
+ *
+ * PIN must be at least 6 digits (numeric).
  *
  * SECURITY: SUPABASE_SERVICE_ROLE_KEY is a secret — pass via env only, never commit it.
  */
@@ -24,8 +26,12 @@ function parseArgs(argv: string[]): Args {
   for (let i = 0; i < argv.length; i++) {
     if (argv[i].startsWith('--')) {
       const key = argv[i].slice(2);
-      const val = argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[++i] : 'true';
-      args[key] = val;
+      const next = argv[i + 1];
+      if (!next || next.startsWith('--')) {
+        fail(`Flag --${key} requires a value.`); // no silent default (e.g. PIN becoming "true")
+      }
+      args[key] = next;
+      i++;
     }
   }
   return args;
@@ -47,7 +53,8 @@ async function main() {
     fail('Required: --phone --pin --role <resident|provider> --name --precinct [--services slug,slug]');
   }
   if (role !== 'resident' && role !== 'provider') fail(`role must be resident|provider, got "${role}"`);
-  if (pin.length < 4) fail('PIN must be at least 4 characters.');
+  if (!/^\d{6,}$/.test(pin)) fail('PIN must be at least 6 digits (numeric).');
+  if (role === 'resident' && a.services) fail('--services is only valid for --role provider.');
 
   const e164 = normalizePkPhone(phone);
   if (!e164) fail(`Invalid Pakistani mobile number: "${phone}"`);
@@ -93,8 +100,14 @@ async function main() {
     service_ids: serviceIds,
   });
   if (profileErr) {
-    await supabase.auth.admin.deleteUser(userId); // roll back the orphan
-    fail(`profile insert failed (auth user rolled back): ${profileErr.message}`);
+    const { error: rollbackErr } = await supabase.auth.admin.deleteUser(userId);
+    if (rollbackErr) {
+      fail(
+        `profile insert failed: ${profileErr.message}\n` +
+          `  ⚠️ ROLLBACK ALSO FAILED — orphan auth user ${userId} remains. Delete it manually: ${rollbackErr.message}`,
+      );
+    }
+    fail(`profile insert failed (auth user rolled back cleanly): ${profileErr.message}`);
   }
 
   console.log(`✓ Provisioned ${role} "${name}" — phone ${e164}, login email ${email}`);

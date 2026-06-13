@@ -19,9 +19,14 @@ export function LoginScreen() {
   async function onLogin() {
     setBusy(true);
     setError(null);
-    const e164 = normalizePkPhone(phone);
+    const e164 = normalizePkPhone(phone.trim());
     if (!e164) {
       setError('Please enter a valid mobile number, like 0300 1234567.');
+      setBusy(false);
+      return;
+    }
+    if (!pin.trim()) {
+      setError('Please enter your PIN.');
       setBusy(false);
       return;
     }

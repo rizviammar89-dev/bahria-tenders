@@ -8,6 +8,15 @@
 - **Missing indexes on some FK columns** — `jobs.resident_id`, `disputes.job_id`, `notification_log.recipient_id` are unindexed. Negligible at POC scale; add when Epic 2 query patterns are known.
 - **No dedup guard on identical job posts** — a resident can post the same service/precinct/description twice. Product/app-layer decision for Epic 2.
 
+## Deferred from: code review of story-1.4 (2026-06-12)
+
+- **Stale-session-while-backgrounded → silent 401s** — after the JWT expires while backgrounded, the app may re-foreground with a stale session; the gate shows the app but every RLS query 401s. Needs a global query-error/401 handler that signs out on auth failure. Owned by the Epic 2 data-fetching layer.
+- **Login error branching** — network errors and bad credentials both show "Phone or PIN is incorrect." Add a connectivity-specific message with the Epic 2 data layer.
+- **Auth-gate loading skeleton** — `Gate()` returns `null` while loading; depending on splash timing this can flash blank. Add a real loading state post-POC.
+- **Synthetic-email enumerability + PIN strength** — the no-SMS scheme makes the login email derivable from a public phone; eliminated by the post-POC phone-OTP migration (which replaces PIN-as-sole-credential). See the PIN-strength decision in the 1.4 story.
+- **PIN non-numeric input filter / unicode-digit phone input** — post-POC input hardening.
+- **`supabase.ts` env module-load throw** — fail-fast is fine for POC; graceful degradation post-POC.
+
 ## Deferred from: code review of story-1.3 (2026-06-12)
 
 - **Profiles SELECT exposes `full_name`/`precinct` to all authenticated users** — intended for provider-card discovery; phone is locked. Tighten to counterparties (job/bid relationship) via a view post-POC if resident-name privacy becomes a concern.

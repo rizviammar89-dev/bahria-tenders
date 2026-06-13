@@ -40,6 +40,10 @@ describe('normalizePkPhone', () => {
     expect(normalizePkPhone('0300abcd567')).toBeNull();
     expect(normalizePkPhone('')).toBeNull();
   });
+  it('rejects mixed/double international prefixes', () => {
+    expect(normalizePkPhone('+9203001234567')).toBeNull(); // +92 then a local 0 (13 digits)
+    expect(normalizePkPhone('00923001234567')).toBeNull(); // 00 international prefix
+  });
 });
 
 describe('phoneToSyntheticEmail', () => {
