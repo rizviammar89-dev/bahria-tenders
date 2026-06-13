@@ -49,6 +49,8 @@ export type OpenJob = {
   precinct: string;
   created_at: string;
   service: { display_en: string; display_ur: string } | null;
+  // The signed-in provider's own bid on this job, if any (RLS returns only the caller's bid).
+  myBid: { id: string; pricePkr: number } | null;
 };
 
 /**
@@ -73,11 +75,18 @@ export async function fetchOpenJobsForMyTrades(): Promise<{ jobs: OpenJob[]; err
 
   const { data, error } = await supabase
     .from('jobs')
-    .select('id, description, precinct, created_at, service:services(display_en, display_ur)')
+    .select('id, description, precinct, created_at, service:services(display_en, display_ur), bids(id, price_pkr)')
     .eq('status', 'open')
     .in('service_id', profile.service_ids as string[])
     .neq('resident_id', uid)
     .order('created_at', { ascending: false });
   if (error) return { jobs: [], error: error.message };
-  return { jobs: (data ?? []) as unknown as OpenJob[], error: null };
+
+  type Row = Omit<OpenJob, 'myBid'> & { bids: { id: string; price_pkr: number }[] };
+  const jobs: OpenJob[] = ((data ?? []) as unknown as Row[]).map(({ bids, ...job }) => ({
+    ...job,
+    // RLS limits the bids embed to the caller's own bid → 0 or 1 row.
+    myBid: bids?.[0] ? { id: bids[0].id, pricePkr: bids[0].price_pkr } : null,
+  }));
+  return { jobs, error: null };
 }

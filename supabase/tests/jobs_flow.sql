@@ -60,6 +60,30 @@ select results_eq(
      order by created_at $$,
   $$ values ('Build a shelf'::text) $$,
   'the feed returns only the open job in the provider''s trade (not other-trade, not cancelled)');
+
+-- Story 2.4 (AC-6): the verified provider submits a bid on the open in-trade job, then edits it.
+select lives_ok(
+  $$ insert into public.bids (job_id, provider_id, price_pkr)
+     select id, '22222222-2222-2222-2222-222222222222', 3000
+     from public.jobs where description = 'Build a shelf' $$,
+  'a verified provider can bid on an open in-trade job');
+select results_eq(
+  $$ select price_pkr from public.bids b
+     join public.jobs j on j.id = b.job_id
+     where j.description = 'Build a shelf' and b.provider_id = auth.uid() $$,
+  $$ values (3000) $$,
+  'the submitted bid is stored at the given price');
+select lives_ok(
+  $$ update public.bids set price_pkr = 3500
+     where provider_id = '22222222-2222-2222-2222-222222222222'
+       and job_id = (select id from public.jobs where description = 'Build a shelf') $$,
+  'the provider can edit their bid while the job is open');
+select results_eq(
+  $$ select price_pkr from public.bids b
+     join public.jobs j on j.id = b.job_id
+     where j.description = 'Build a shelf' and b.provider_id = auth.uid() $$,
+  $$ values (3500) $$,
+  'the edited bid reflects the new price');
 reset role;
 
 select * from finish();

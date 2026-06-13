@@ -1,9 +1,10 @@
 // Story 2.3: Provider Job Discovery (FR-7). A verified provider sees open jobs in their
 // trades. RLS jobs_select_visible is the security backstop; the query filters to relevance.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, RefreshControl, StyleSheet } from 'react-native';
+import { FlatList, Pressable, RefreshControl, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { BidModal } from '@/components/bid-modal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
@@ -16,6 +17,7 @@ export default function JobsFeedScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [now, setNow] = useState(0); // stamped at load time (Date.now() is impure → keep it out of render)
+  const [bidJob, setBidJob] = useState<OpenJob | null>(null); // open the bid modal for this job
   const mounted = useRef(true);
 
   // Single fetch path, used by both the initial load and pull-to-refresh.
@@ -84,8 +86,23 @@ export default function JobsFeedScreen() {
                 {item.precinct} · {timeAgo(item.created_at, now)}
               </ThemedText>
               <ThemedText type="default">{item.description}</ThemedText>
+              <Pressable
+                onPress={() => setBidJob(item)}
+                style={({ pressed }) => [styles.bidButton, pressed && styles.pressed]}>
+                <ThemedText type="default" style={styles.bidButtonLabel}>
+                  {item.myBid ? `Edit bid · Rs ${item.myBid.pricePkr.toLocaleString('en-US')}` : 'Place bid'}
+                </ThemedText>
+              </Pressable>
             </ThemedView>
           )}
+        />
+        <BidModal
+          job={bidJob}
+          onClose={() => setBidJob(null)}
+          onSubmitted={() => {
+            setBidJob(null);
+            load(); // refresh so the card flips to "Edit bid · Rs N"
+          }}
         />
       </SafeAreaView>
     </ThemedView>
@@ -97,7 +114,19 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   list: { padding: Spacing.four, gap: Spacing.three },
   header: { gap: Spacing.two, marginBottom: Spacing.one },
-  card: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.one, minHeight: 64 },
+  card: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.two, minHeight: 64 },
   empty: { padding: Spacing.four, borderRadius: Spacing.three, gap: Spacing.one },
   error: { color: '#c0392b' },
+  bidButton: {
+    marginTop: Spacing.one,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Spacing.three,
+    backgroundColor: '#208AEF',
+    alignSelf: 'flex-start',
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  bidButtonLabel: { color: '#ffffff' },
+  pressed: { opacity: 0.7 },
 });
