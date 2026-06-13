@@ -4,7 +4,7 @@ baseline_commit: 069e824fc80a66833ba5cbad1e4ffdf7d3af911a
 
 # Story 2.3b: Role-Gated Navigation
 
-Status: review
+Status: done
 
 <!-- Cross-cutting Epic-2 story (not in the Bubble epics) created to resolve the role-nav debt flagged in the 2.1 and 2.3 code reviews (deferred-work.md). After 2.1 + 2.3, residents and providers see the same tabs (Post a Job + Jobs). This story shows the right tabs per profile.role. Pure client; no backend change. -->
 
@@ -59,6 +59,24 @@ so that the app is clear — residents post jobs, providers find jobs — rather
 - [Source: _bmad-output/planning-artifacts/architecture.md#Project-Structure] — res_* / prov_* surface separation intent (role decided once at login, routed hard)
 - External (verified 2026-06-12): docs.expo.dev/router/advanced/native-tabs (conditional triggers + remount caveat); expo/expo#41781 (`hidden` Android bug → use conditional render)
 
+### Review Findings (code review 2026-06-12)
+
+Acceptance Auditor: **PASS** (all 5 ACs met, zero backend change, no scope creep). Hunters found real auth-state-machine issues — the sign-out stale-role being a genuine (currently-masked) bug.
+
+**Patch (applied 2026-06-12):**
+- [x] [Review][Patch] **Sign-out stale role** — fixed in `deriveAuth`: `role` is exposed only when `signedIn && roleResolved`, so sign-out (and a stale `roleState`) yields `role: null`. Proven by a dedicated jest case.
+- [x] [Review][Patch] **Token-refresh churn** — role effect now deps on `[session?.user?.id]`; a hourly `TOKEN_REFRESHED` (same uid) no longer re-fetches the role.
+- [x] [Review][Patch] **Extracted + unit-tested derivation** — `app/src/lib/auth-state.ts` `deriveAuth(...)` + `auth-state.test.ts` (6 cases: loading-until-session, signed-out, signed-out-no-leak, signed-in-pre-fetch, resolved, cross-user-no-flash). `auth.tsx` now calls `deriveAuth` (removes the non-obvious inline ternary). 33 jest green.
+
+**Deferred (real, later / post-POC):**
+- [x] [Review][Defer] Role fetch with no timeout could hang `loading` forever on a never-settling socket — add global fetch timeouts post-POC (same pattern as 1.4 getSession; rare on LAN). (Blind #2)
+- [x] [Review][Defer] Role-fetch error is silent (no notification/retry) — Epic-2 error handling (ties to the deferred 401/session handler).
+- [x] [Review][Defer] If the role fetch exceeds the 600ms splash, a brief blank screen — couple the splash to `loading` or add a real loading skeleton post-POC. (Edge #3, #8)
+
+**Dismissed:**
+- `roleTabs` purity, `useAuth()`-in-argument — verified fine.
+- Role-change-mid-session remount — no in-app role-change path exists; revisit if one is added.
+
 ## Dev Agent Record
 
 ### Agent Model Used
@@ -85,3 +103,4 @@ claude-opus-4-8 (Amelia / dev-story)
 - `app/src/lib/role-tabs.ts` (NEW) + `app/src/lib/role-tabs.test.ts` (NEW)
 - `app/src/lib/auth.tsx` (MODIFIED) — `role` + loading gate
 - `app/src/components/app-tabs.tsx` (MODIFIED) — conditional role triggers
+- `app/src/lib/auth-state.ts` (NEW, review) — pure `deriveAuth` (role/loading) + `auth-state.test.ts` (6 cases)

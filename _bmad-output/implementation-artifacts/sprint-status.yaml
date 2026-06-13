@@ -65,7 +65,7 @@ development_status:
   2-1-post-a-job: done # POC: IN SCOPE — first product screen; post-job + Supabase insert under RLS; code-reviewed + hardened (load-error state, double-submit guard, unmount guard); 17 jest + 77 pgTAP green (device E2E = manual smoke) 2026-06-12
   2-2-provider-availability-signal: backlog # POC: deferred — simple feed + pull-to-refresh instead
   2-3-provider-job-discovery: done # POC: IN SCOPE — provider feed; code-reviewed + hardened (timeAgo guards, unmount-safe fetch, exclusion test); 24 jest + 78 pgTAP green (device E2E = manual smoke) 2026-06-12
-  2-3b-role-gated-navigation: review # POC: IN SCOPE (added 2026-06-12) — resident/provider tabs by role; resolves 2.1/2.3 role-nav debt; 27 jest + 78 pgTAP green (device E2E = manual smoke)
+  2-3b-role-gated-navigation: done # POC: IN SCOPE — resident/provider tabs by role; code-reviewed + hardened (sign-out role fix, deriveAuth extracted+tested, no refresh churn); 33 jest + 78 pgTAP green (device E2E = manual smoke) 2026-06-12
   2-4-submit-a-bid-with-subscription-gate-check: backlog # POC: IN SCOPE reduced — single bid w/ UNIQUE(job_id,provider_id); no subscription gate (all free)
   2-5-broadcast-provider-notifications-backend: backlog # POC: IN SCOPE reduced — push-only via dispatcher interface + notification_log; SMS post-POC
   2-6-supply-aware-expectation-setting: backlog # POC: deferred

@@ -4,6 +4,7 @@
 import type { Session } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
+import { deriveAuth } from '@/lib/auth-state';
 import type { Role } from '@/lib/role-tabs';
 import { supabase } from '@/lib/supabase';
 
@@ -68,11 +69,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       mounted = false;
     };
-  }, [session]);
+    // Depend on the stable uid, not the session object — avoids re-fetching the role on every
+    // hourly TOKEN_REFRESHED (new session object, same user).
+  }, [session?.user?.id]);
 
-  const roleResolved = session?.user ? roleState.uid === session.user.id : true;
-  const role = roleResolved ? roleState.role : null;
-  const loading = !sessionLoaded || !roleResolved;
+  const { role, loading } = deriveAuth({
+    sessionUserId: session?.user?.id ?? null,
+    sessionLoaded,
+    roleState,
+  });
 
   return <AuthContext.Provider value={{ session, role, loading }}>{children}</AuthContext.Provider>;
 }

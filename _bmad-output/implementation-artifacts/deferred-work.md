@@ -8,6 +8,12 @@
 - **Missing indexes on some FK columns** — `jobs.resident_id`, `disputes.job_id`, `notification_log.recipient_id` are unindexed. Negligible at POC scale; add when Epic 2 query patterns are known.
 - **No dedup guard on identical job posts** — a resident can post the same service/precinct/description twice. Product/app-layer decision for Epic 2.
 
+## Deferred from: code review of story-2.3b (2026-06-12)
+
+- **No fetch timeouts** — `auth.tsx` role fetch (and `getSession` in 1.4) can hang `loading` forever on a never-settling socket. Add a global Supabase fetch timeout/abort post-POC (rare on LAN).
+- **Silent role-fetch error** — a failed `profiles.role` fetch silently degrades to role=null (only Home shows) with no notification/retry. Fold into Epic-2 error handling (ties to the deferred session/401 handler).
+- **Splash vs role-fetch timing** — if the role fetch exceeds the fixed 600ms splash, a brief blank screen appears (Gate returns null). Couple the splash overlay to `loading`, or render a real loading skeleton, post-POC.
+
 ## Deferred from: code review of story-2.3 (2026-06-12)
 
 - **Empty-`service_ids` provider guidance** — a provider who hasn't selected trades sees "No open jobs" with no nudge; show "Select your trades to see jobs." Owned by role-nav/provider-onboarding.
