@@ -4,7 +4,7 @@ baseline_commit: 3170d7e0263a7942d412ecb2e114dcef46da4db4
 
 # Story 2.1: Post a Job (FR-6)
 
-Status: review
+Status: done
 
 <!-- Epic 2 / the demand loop — the FIRST real product screen ("the screen that IS the product", poc-spec build order). Translates the Bubble-era epic story 2.1 (FR-6) to the POC stack: an Expo screen that inserts a jobs row via the authed Supabase client; RLS jobs_insert_own (Story 1.3) already enforces resident_id = auth.uid(). Backend (jobs table, services seed, RLS) is DONE — this story is the client. -->
 
@@ -76,6 +76,27 @@ so that nearby providers can see it and bid.
 - [Source: _bmad-output/implementation-artifacts/1-2-core-data-model-schema.md] — jobs table shape (resident_id, service_id, description, precinct, status default 'open', awarded_provider_id)
 - [Source: _bmad-output/implementation-artifacts/1-3-rls-and-grants.md] — `jobs_insert_own` (WITH CHECK resident_id=auth.uid()), `jobs_select_visible`; the auth-sim pgTAP harness in `supabase/tests/rls.sql`
 - [Source: _bmad-output/implementation-artifacts/1-4-auth-phone-pin.md] — `supabase` client, auth session, `@jest/globals` import pattern, ThemedView/calm-copy UI conventions
+
+### Review Findings (code review 2026-06-12)
+
+Acceptance Auditor: **PASS** (all 6 ACs genuinely met, no scope violations). No Critical/High security findings (well-guarded CRUD on the 1.3-secured backend). Hunters found client-hygiene defects, triaged below.
+
+**Patch (applied 2026-06-12):**
+- [x] [Review][Patch] `fetchServices` error/empty now surfaces a `loadError` state ("Couldn't load trades…" / "No trades available") — no more silent blank screen.
+- [x] [Review][Patch] double-submit guard: `if (busy) return` at the top of `onPost`.
+- [x] [Review][Patch] `setPosted(false)` + `setError(null)` moved to the top of `onPost`; removed from chip/description handlers (stale-banner fixed).
+- [x] [Review][Patch] `console.warn('createJob failed:', postError)` before the generic message (field-debuggable).
+- [x] [Review][Patch] `useEffect` cancelled-guard prevents post-unmount setState. jest 17 + tsc + lint green.
+
+**Deferred (real, owned by a later story / spec-sanctioned):**
+- [x] [Review][Defer] Provider can reach + post a job (tab not role-gated; `jobs_insert_own` only checks `resident_id=auth.uid()`, not role) — role-gated navigation is an explicit Epic-2 cross-cutting gap (flagged in this story's Dev Notes). Not a security hole (RLS still binds the row to the actor). Owned by the Epic-2 role-nav task.
+- [x] [Review][Defer] Session-expired-mid-post shows the generic error rather than "please sign in again" — ties to the deferred stale-session/401 handler from Story 1.4's review (Epic-2 data layer).
+- [x] [Review][Defer] No length cap on description/precinct — content-hygiene, post-POC.
+
+**Dismissed:**
+- "pgTAP has no negative/RLS test" — the deny side (posting as another resident → 42501) is already covered in `rls.sql` (`jobs_insert as other resident`); the reviewer lacked cross-file context. The new `jobs_flow.sql` covers the positive path the deny suite didn't.
+- "serviceId not trimmed" — chips supply clean UUIDs; FK is the backstop.
+- "hardcoded hex colors" — pragmatically permitted for the POC; theme-palette cleanup is a later nicety.
 
 ## Dev Agent Record
 

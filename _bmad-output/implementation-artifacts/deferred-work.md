@@ -8,6 +8,12 @@
 - **Missing indexes on some FK columns** — `jobs.resident_id`, `disputes.job_id`, `notification_log.recipient_id` are unindexed. Negligible at POC scale; add when Epic 2 query patterns are known.
 - **No dedup guard on identical job posts** — a resident can post the same service/precinct/description twice. Product/app-layer decision for Epic 2.
 
+## Deferred from: code review of story-2.1 (2026-06-12)
+
+- **Role-gated navigation** — the "Post a Job" tab (and later provider screens) are visible to all authenticated users; a provider could post a job (RLS binds the row to them, so no security hole, but wrong UX). Build role-gated nav (residents: Post Job / My Jobs; providers: Feed / My Bids) as an Epic-2 cross-cutting task — likely a dedicated story before the demo. Also remove the 1.1 Push Spike tab from the shipping nav once the push gate is decided.
+- **Session-expired-mid-action UX** — `createJob` (and future authed actions) show a generic error when the session expired; pair with the deferred stale-session/401 handler (from 1.4 review) in the Epic-2 data layer to redirect to login.
+- **Content length caps** — `jobs.description`/`precinct` are unbounded; add sensible client `maxLength` + a server check post-POC.
+
 ## Deferred from: code review of story-1.4 (2026-06-12)
 
 - **Stale-session-while-backgrounded → silent 401s** — after the JWT expires while backgrounded, the app may re-foreground with a stale session; the gate shows the app but every RLS query 401s. Needs a global query-error/401 handler that signs out on auth failure. Owned by the Epic 2 data-fetching layer.

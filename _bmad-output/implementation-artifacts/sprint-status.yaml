@@ -62,7 +62,7 @@ development_status:
   epic-1-retrospective: optional
 
   epic-2: in-progress # POC: CORE — the demand loop is the product
-  2-1-post-a-job: review # POC: IN SCOPE — first product screen; Expo post-job + Supabase insert under RLS; 17 jest + 77 pgTAP green (dev complete 2026-06-12; device E2E = manual smoke)
+  2-1-post-a-job: done # POC: IN SCOPE — first product screen; post-job + Supabase insert under RLS; code-reviewed + hardened (load-error state, double-submit guard, unmount guard); 17 jest + 77 pgTAP green (device E2E = manual smoke) 2026-06-12
   2-2-provider-availability-signal: backlog # POC: deferred — simple feed + pull-to-refresh instead
   2-3-provider-job-discovery: backlog # POC: IN SCOPE
   2-4-submit-a-bid-with-subscription-gate-check: backlog # POC: IN SCOPE reduced — single bid w/ UNIQUE(job_id,provider_id); no subscription gate (all free)

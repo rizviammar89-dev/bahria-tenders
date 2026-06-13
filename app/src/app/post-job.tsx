@@ -16,19 +16,35 @@ export default function PostJobScreen() {
   const [description, setDescription] = useState('');
   const [precinct, setPrecinct] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [posted, setPosted] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    fetchServices().then(({ services }) => setServices(services));
-    fetchMyPrecinct().then((p) => {
-      if (p) setPrecinct(p);
+    let cancelled = false;
+    fetchServices().then(({ services, error: servicesError }) => {
+      if (cancelled) return;
+      if (servicesError) {
+        setLoadError("Couldn't load trades — please try again.");
+      } else if (services.length === 0) {
+        setLoadError('No trades are available right now.');
+      } else {
+        setServices(services);
+      }
     });
+    fetchMyPrecinct().then((p) => {
+      if (!cancelled && p) setPrecinct(p);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function onPost() {
+    if (busy) return; // guard against a double-tap before the disabled state renders
     setBusy(true);
     setError(null);
+    setPosted(false);
     const draft = { serviceId, description, precinct };
     const check = validateJobDraft(draft);
     if (!check.ok) {
@@ -38,6 +54,7 @@ export default function PostJobScreen() {
     }
     const { error: postError } = await createJob(draft);
     if (postError) {
+      console.warn('createJob failed:', postError); // keep the real cause for field debugging
       setError("Couldn't post your job — please try again.");
       setBusy(false);
       return;
@@ -65,16 +82,18 @@ export default function PostJobScreen() {
           )}
 
           <ThemedText type="smallBold">Trade</ThemedText>
+          {loadError && (
+            <ThemedText type="small" style={styles.error}>
+              {loadError}
+            </ThemedText>
+          )}
           <ThemedView style={styles.chips}>
             {services.map((s) => {
               const selected = s.id === serviceId;
               return (
                 <Pressable
                   key={s.id}
-                  onPress={() => {
-                    setServiceId(s.id);
-                    setPosted(false);
-                  }}
+                  onPress={() => setServiceId(s.id)}
                   style={({ pressed }) => [
                     styles.chip,
                     selected && styles.chipSelected,
@@ -91,10 +110,7 @@ export default function PostJobScreen() {
           <ThemedText type="smallBold">Describe the problem</ThemedText>
           <TextInput
             value={description}
-            onChangeText={(t) => {
-              setDescription(t);
-              setPosted(false);
-            }}
+            onChangeText={setDescription}
             placeholder="e.g. Kitchen tap is leaking"
             multiline
             style={[styles.input, styles.multiline]}
