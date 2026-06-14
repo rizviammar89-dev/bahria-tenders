@@ -15,6 +15,9 @@ supabase/.branches/
 .env*
 !.env.example
 *service-account*.json
+# Firebase admin SDK / service-account keys download as <project>-firebase-adminsdk-<hash>.json
+*firebase-adminsdk*.json
+*-adminsdk-*.json
 
 # OS / editor
 Thumbs.db

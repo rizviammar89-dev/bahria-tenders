@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "745063595760",
+    "project_id": "bahria-tenders",
+    "storage_bucket": "bahria-tenders.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:745063595760:android:c739787f6c84649bb88c35",
+        "android_client_info": {
+          "package_name": "com.bahriatenders.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC2u-hXvdW4mHmc7nOOM5bVXr3ufEUSN_k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
