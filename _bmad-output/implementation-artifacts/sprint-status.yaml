@@ -70,7 +70,7 @@ development_status:
   2-5-broadcast-provider-notifications-backend: backlog # POC: IN SCOPE reduced — push-only via dispatcher interface + notification_log; SMS post-POC
   2-6-supply-aware-expectation-setting: backlog # POC: deferred
   2-7-empty-state-capture-concierge-backstop: backlog # POC: deferred — founder watches "unaccepted jobs" Studio view + WhatsApp fallback
-  2-8-compare-bids-award: backlog # POC: IN SCOPE reduced — stars + completed-job count only (no Adab/social proof on card)
+  2-8-compare-and-award: review # POC: IN SCOPE — resident My Jobs + compare + award (award_job RPC) + contact reveal (get_job_contacts RPC); 45 jest + 91 pgTAP green (dev complete 2026-06-13; device E2E = manual smoke)
   2-9-offline-completion-mark-complete: backlog # POC: IN SCOPE
   epic-2-retrospective: optional
 
