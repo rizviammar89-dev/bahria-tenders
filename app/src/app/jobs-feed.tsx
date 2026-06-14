@@ -18,6 +18,7 @@ export default function JobsFeedScreen() {
   const [loaded, setLoaded] = useState(false);
   const [now, setNow] = useState(0); // stamped at load time (Date.now() is impure → keep it out of render)
   const [bidJob, setBidJob] = useState<OpenJob | null>(null); // open the bid modal for this job
+  const [confirmation, setConfirmation] = useState<string | null>(null);
   const mounted = useRef(true);
 
   // Single fetch path, used by both the initial load and pull-to-refresh.
@@ -60,6 +61,11 @@ export default function JobsFeedScreen() {
           ListHeaderComponent={
             <ThemedView style={styles.header}>
               <ThemedText type="subtitle">Open Jobs</ThemedText>
+              {confirmation && (
+                <ThemedView type="backgroundElement" style={styles.confirm}>
+                  <ThemedText type="smallBold">{confirmation}</ThemedText>
+                </ThemedView>
+              )}
               {loadError && (
                 <ThemedText type="small" style={styles.error}>
                   {loadError}
@@ -87,7 +93,10 @@ export default function JobsFeedScreen() {
               </ThemedText>
               <ThemedText type="default">{item.description}</ThemedText>
               <Pressable
-                onPress={() => setBidJob(item)}
+                onPress={() => {
+                  setConfirmation(null);
+                  setBidJob(item);
+                }}
                 style={({ pressed }) => [styles.bidButton, pressed && styles.pressed]}>
                 <ThemedText type="default" style={styles.bidButtonLabel}>
                   {item.myBid ? `Edit bid · Rs ${item.myBid.pricePkr.toLocaleString('en-US')}` : 'Place bid'}
@@ -97,10 +106,12 @@ export default function JobsFeedScreen() {
           )}
         />
         <BidModal
+          key={bidJob?.id ?? 'none'} // remount per open → fresh form state, no stale price/busy
           job={bidJob}
           onClose={() => setBidJob(null)}
-          onSubmitted={() => {
+          onSubmitted={(pricePkr) => {
             setBidJob(null);
+            setConfirmation(`Your bid is in — Rs ${pricePkr.toLocaleString('en-US')}`);
             load(); // refresh so the card flips to "Edit bid · Rs N"
           }}
         />
@@ -114,6 +125,7 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   list: { padding: Spacing.four, gap: Spacing.three },
   header: { gap: Spacing.two, marginBottom: Spacing.one },
+  confirm: { padding: Spacing.three, borderRadius: Spacing.three },
   card: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.two, minHeight: 64 },
   empty: { padding: Spacing.four, borderRadius: Spacing.three, gap: Spacing.one },
   error: { color: '#c0392b' },

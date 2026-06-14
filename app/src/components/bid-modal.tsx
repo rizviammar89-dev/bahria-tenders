@@ -17,22 +17,14 @@ export function BidModal({
 }: {
   job: OpenJob | null;
   onClose: () => void;
-  onSubmitted: () => void;
+  onSubmitted: (pricePkr: number) => void;
 }) {
-  const [priceText, setPriceText] = useState('');
-  const [note, setNote] = useState('');
+  // This component is keyed by job.id in the feed, so it remounts fresh on each open —
+  // initializers safely pre-fill price + note from the current bid (no render-phase setState).
+  const [priceText, setPriceText] = useState(() => (job?.myBid ? String(job.myBid.pricePkr) : ''));
+  const [note, setNote] = useState(() => job?.myBid?.note ?? '');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-
-  // Reset the form whenever a different job is opened (pre-fill price on edit).
-  const [shownJobId, setShownJobId] = useState<string | null>(null);
-  if (job && job.id !== shownJobId) {
-    setShownJobId(job.id);
-    setPriceText(job.myBid ? String(job.myBid.pricePkr) : '');
-    setNote('');
-    setError(null);
-    setBusy(false);
-  }
 
   async function onSubmit() {
     if (busy || !job) return;
@@ -57,7 +49,7 @@ export function BidModal({
       return;
     }
     setBusy(false);
-    onSubmitted();
+    onSubmitted(check.pricePkr);
   }
 
   return (

@@ -4,7 +4,7 @@ baseline_commit: b05b9a0b5fe535876185d1d190eea33b8f986081
 
 # Story 2.4: Submit a Bid (FR-8)
 
-Status: review
+Status: done
 
 <!-- Epic 2 / demand loop — the provider acts on a feed job. Closes post(2.1)→discover(2.3)→BID. Backend is DONE: bids table + UNIQUE(job_id,provider_id) (1.2); bids_insert_provider (verified provider, not own job, job open) + bids_update_own (own bid, while job open) RLS (1.3, hardened in review). ALL the deny cases are already pgTAP-proven in rls.sql. This story is the client (a bid form) + positive-path pgTAP. Subscription gate-check (FR-17) is POC-deferred → no subscription check. -->
 
@@ -74,6 +74,26 @@ so that the resident can compare me and choose me.
 - [Source: _bmad-output/implementation-artifacts/1-3-rls-and-grants.md] — `bids_insert_provider`/`bids_update_own` (job-open guard) + the deny pgTAP in `rls.sql`; `bids_select_party` (own-bid visibility)
 - [Source: _bmad-output/implementation-artifacts/2-3-provider-job-discovery.md] — `fetchOpenJobsForMyTrades`/`OpenJob`, feed patterns, `jobs_flow.sql` harness
 - [Source: _bmad-output/implementation-artifacts/2-1-post-a-job.md] — data-layer `{error}` + validate→network + `console.warn` patterns
+
+### Review Findings (code review 2026-06-13)
+
+Acceptance Auditor: **6/6 ACs functionally met**, no scope creep — but AC-4 (success confirmation) and AC-5 (note pre-fill) each miss one explicit clause. All three reviewers independently flagged the silent-0-row-update bug.
+
+**Patch (applied 2026-06-13):**
+- [x] [Review][Patch] **Silent 0-row update fixed** — `submitBid` update path now `.select('id')`; empty result → returns "This job is no longer open — pull down to refresh." No more false success on a post-award edit race.
+- [x] [Review][Patch] **AC-4 confirmation** — feed now shows a "Your bid is in — Rs N" banner after submit (price passed via `onSubmitted(pricePkr)`); cleared when a new bid is opened.
+- [x] [Review][Patch] **Stale form + busy lockout fixed** — `<BidModal key={bidJob?.id}>` remounts per open; the render-phase setState hack is gone, replaced by `useState` initializers from `job`. Fresh price/note/busy every open.
+- [x] [Review][Patch] **AC-5 note pre-fill** — `bids` embed + `OpenJob.myBid` now carry `note`; the modal pre-fills it on edit (no more silent blanking).
+- [x] [Review][Patch] **Price cap** — `validateBidInput` rejects > Rs 1 crore (`10_000_000`) + 3 new jest cases. 41 jest green.
+
+**Deferred (later / post-POC):**
+- [x] [Review][Defer] No `note` length cap — content hygiene, post-POC (same as description cap from 2.1).
+- [x] [Review][Defer] Same-tick double-submit ref guard — the DB `UNIQUE(job_id,provider_id)` already rejects a duplicate insert; the keyed-remount resets busy per open. Add a `useRef` guard only if it surfaces in practice.
+
+**Dismissed (RLS-handled / non-issue):**
+- "Insert trusts client provider_id / could duplicate / `bids[0]` could leak another provider's bid" (Blind #5, #6) — verified false: RLS enforces `provider_id = auth.uid()` on insert, `bids_select_party` scopes the embed to the caller's own bid, and `UNIQUE(job_id,provider_id)` prevents duplicates — all pgTAP-proven in `rls.sql`. The reviewers correctly noted "depends on unseen RLS"; that RLS exists and is tested.
+- jobs_flow post-award-freeze test (Edge #6) — already covered in `rls.sql` (bid-freeze-after-award).
+- bid-input leading-zeros (`'007'`→7) — semantically a valid price; not a bug.
 
 ## Dev Agent Record
 

@@ -8,6 +8,11 @@
 - **Missing indexes on some FK columns** — `jobs.resident_id`, `disputes.job_id`, `notification_log.recipient_id` are unindexed. Negligible at POC scale; add when Epic 2 query patterns are known.
 - **No dedup guard on identical job posts** — a resident can post the same service/precinct/description twice. Product/app-layer decision for Epic 2.
 
+## Deferred from: code review of story-2.4 (2026-06-13)
+
+- **`bids.note` length cap** — no max length on the bid note; add a sensible client `maxLength` + server check post-POC (same theme as the deferred `jobs.description`/`precinct` caps).
+- **Same-tick double-submit ref guard** — the `if (busy) return` is async-state; a same-tick double tap could fire twice. The DB `UNIQUE(job_id,provider_id)` rejects a duplicate insert and the keyed-remount resets `busy` per open, so it's DB-safe; add a `useRef` synchronous guard only if it surfaces.
+
 ## Deferred from: code review of story-2.3b (2026-06-12)
 
 - **No fetch timeouts** — `auth.tsx` role fetch (and `getSession` in 1.4) can hang `loading` forever on a never-settling socket. Add a global Supabase fetch timeout/abort post-POC (rare on LAN).

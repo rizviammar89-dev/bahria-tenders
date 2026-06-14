@@ -2,6 +2,9 @@
 // so only a positive integer string is valid. Pure + unit-tested; the bid modal reuses it.
 export type BidValidation = { ok: true; pricePkr: number } | { ok: false; error: string };
 
+// Rs 1 crore — far above any home-service job, and well within the int4 price_pkr column.
+const MAX_PRICE_PKR = 10_000_000;
+
 export function validateBidInput(priceText: string): BidValidation {
   const trimmed = priceText.trim();
   if (!trimmed) {
@@ -14,6 +17,9 @@ export function validateBidInput(priceText: string): BidValidation {
   const pricePkr = parseInt(trimmed, 10);
   if (pricePkr <= 0) {
     return { ok: false, error: 'Your price must be more than zero.' };
+  }
+  if (pricePkr > MAX_PRICE_PKR) {
+    return { ok: false, error: 'That price looks too high — please check it.' };
   }
   return { ok: true, pricePkr };
 }

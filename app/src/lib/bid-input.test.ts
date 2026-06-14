@@ -27,4 +27,9 @@ describe('validateBidInput', () => {
   it('rejects negatives', () => {
     expect(validateBidInput('-100').ok).toBe(false);
   });
+  it('accepts the max (Rs 1 crore) and rejects above it', () => {
+    expect(validateBidInput('10000000')).toEqual({ ok: true, pricePkr: 10_000_000 });
+    expect(validateBidInput('10000001').ok).toBe(false);
+    expect(validateBidInput('999999999999').ok).toBe(false);
+  });
 });

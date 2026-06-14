@@ -16,11 +16,18 @@ export async function submitBid(input: {
   const note = input.note.trim() || null;
 
   if (input.existingBidId) {
-    const { error } = await supabase
+    // .select() so we can tell a real update from a 0-row no-op: RLS silently skips the row
+    // (no error) if the job is no longer open or the bid is gone — that must NOT read as success.
+    const { data, error } = await supabase
       .from('bids')
       .update({ price_pkr: input.pricePkr, note, updated_at: new Date().toISOString() })
-      .eq('id', input.existingBidId);
-    return { error: error ? error.message : null };
+      .eq('id', input.existingBidId)
+      .select('id');
+    if (error) return { error: error.message };
+    if (!data || data.length === 0) {
+      return { error: 'This job is no longer open — pull down to refresh.' };
+    }
+    return { error: null };
   }
 
   const { data: userData } = await supabase.auth.getUser();
