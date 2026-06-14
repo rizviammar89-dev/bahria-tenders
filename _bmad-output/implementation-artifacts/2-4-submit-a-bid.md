@@ -4,7 +4,7 @@ baseline_commit: b05b9a0b5fe535876185d1d190eea33b8f986081
 
 # Story 2.4: Submit a Bid (FR-8)
 
-Status: in-progress
+Status: review
 
 <!-- Epic 2 / demand loop — the provider acts on a feed job. Closes post(2.1)→discover(2.3)→BID. Backend is DONE: bids table + UNIQUE(job_id,provider_id) (1.2); bids_insert_provider (verified provider, not own job, job open) + bids_update_own (own bid, while job open) RLS (1.3, hardened in review). ALL the deny cases are already pgTAP-proven in rls.sql. This story is the client (a bid form) + positive-path pgTAP. Subscription gate-check (FR-17) is POC-deferred → no subscription check. -->
 
@@ -28,20 +28,20 @@ so that the resident can compare me and choose me.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Bid validation + tests (AC-1, AC-6)
-  - [ ] `app/src/lib/bid-input.ts` — `validateBidInput`
-  - [ ] `app/src/lib/bid-input.test.ts` — valid, empty, non-numeric, zero, decimal, whitespace (`@jest/globals`)
-- [ ] Task 2: Bid data layer + feed enrichment (AC-2, AC-3)
-  - [ ] `app/src/lib/bids.ts` — `submitBid` (insert-or-update)
-  - [ ] `app/src/lib/jobs.ts` — extend `OpenJob` with `myBid` + embed `bids(id, price_pkr)` in `fetchOpenJobsForMyTrades`; map `myBid = bids[0] ?? null`
-- [ ] Task 3: Bid modal (AC-4, AC-5)
-  - [ ] `app/src/components/bid-modal.tsx` — RN `Modal`, price/note inputs, validate→submit, success/error states; pre-fill on edit
-- [ ] Task 4: Wire the feed (AC-3, AC-4)
-  - [ ] `app/src/app/jobs-feed.tsx` — per-card "Place bid"/"Edit bid · Rs N" button opens the modal for that job; on success refresh the feed
-- [ ] Task 5: DB tests + verify (AC-6)
-  - [ ] Extend `supabase/tests/jobs_flow.sql` — verified-provider submits a bid (lives_ok) → price present; edit-while-open updates price (lives_ok + results_eq)
-  - [ ] `supabase test db`, `npm test`, `tsc --noEmit`, `expo lint` all green
-- [ ] Task 6: Commit referencing story 2.4
+- [x] Task 1: Bid validation + tests (AC-1, AC-6)
+  - [x] `app/src/lib/bid-input.ts` — `validateBidInput` (whole-rupee positive int)
+  - [x] `app/src/lib/bid-input.test.ts` — 7 cases (valid, trim, empty, zero, non-numeric, decimal, negative)
+- [x] Task 2: Bid data layer + feed enrichment (AC-2, AC-3)
+  - [x] `app/src/lib/bids.ts` — `submitBid` (insert when no existing bid, else update; provider_id from getUser)
+  - [x] `app/src/lib/jobs.ts` — `OpenJob.myBid` + `bids(id, price_pkr)` embed; `myBid = bids[0] ?? null` (RLS limits to caller's bid)
+- [x] Task 3: Bid modal (AC-4, AC-5)
+  - [x] `app/src/components/bid-modal.tsx` — RN `Modal`, price (Rs prefix, number-pad) + note, validate→submit, calm error, `console.warn` real error; pre-fills price on edit
+- [x] Task 4: Wire the feed (AC-3, AC-4)
+  - [x] `app/src/app/jobs-feed.tsx` — per-card "Place bid" / "Edit bid · Rs N" opens the modal; refresh on submit so the card flips
+- [x] Task 5: DB tests + verify (AC-6)
+  - [x] `jobs_flow.sql` — verified provider bids on the open in-trade job (lives_ok) → price stored (results_eq); edit-while-open updates price (lives_ok + results_eq)
+  - [x] `supabase test db` → 82 green; `npm test` → 40 green; `tsc --noEmit` + `expo lint` clean
+- [x] Task 6: Commit referencing story 2.4
 
 ## Dev Notes
 
@@ -79,8 +79,29 @@ so that the resident can compare me and choose me.
 
 ### Agent Model Used
 
+claude-opus-4-8 (Amelia / dev-story)
+
 ### Debug Log References
+
+- `npx jest` → 40 passed (incl. 7 new bid-input)
+- `supabase test db` → 82 (jobs_flow 7 + rls 23 + schema 43 + smoke 1) — All tests successful
+- `tsc --noEmit` + `expo lint` clean
+- Mid-story: Docker Desktop dropped; required a `supabase start` + `supabase db reset` (the reset cleared the earlier device-test accounts, whose phone collided with a schema.sql fixture)
 
 ### Completion Notes List
 
+- All 6 ACs satisfied. Closes post(2.1)→discover(2.3)→**bid**. Pure client + positive pgTAP on the already-secured backend (no migration, no RLS change).
+- The whole bid security surface (verified provider, not-own-job, job-open, post-award freeze, one-per-job, immutable job_id) was already enforced + pgTAP-proven in `rls.sql` (1.3 review). 2.4 adds the positive path: a valid bid lands, and an edit-while-open updates the price.
+- **Insert-vs-edit decided by `myBid`** (not an upsert — insert/update have different RLS policies). The feed embeds the caller's own bid via `bids(id, price_pkr)`, which RLS limits to a single row (`bids_select_party`), so no other provider's bid leaks. This also closes the 2.3-review note that the feed didn't reflect bids — cards now show "Place bid" or "Edit bid · Rs N".
+- A `Modal` (not a route) keeps the feed's tab structure unchanged. The form resets per-job via the supported render-phase derived-state pattern (didn't trip the purity lint).
+- **⚠️ Device E2E = manual smoke** (same as prior screens): submit a bid through the modal on a real device against LAN-IP Supabase. The validation + the DB round-trip are proven (jest + pgTAP); the modal render/tap flow is the manual part.
+- **Note:** the `db reset` wiped the device-test accounts (Bilal/Ayesha) — re-run `scripts/provision_user.ts` before the phone smoke.
+
 ### File List
+
+- `app/src/lib/bid-input.ts` (NEW) + `app/src/lib/bid-input.test.ts` (NEW)
+- `app/src/lib/bids.ts` (NEW) — `submitBid`
+- `app/src/lib/jobs.ts` (MODIFIED) — `OpenJob.myBid` + bids embed
+- `app/src/components/bid-modal.tsx` (NEW) — bid form modal
+- `app/src/app/jobs-feed.tsx` (MODIFIED) — per-card bid button + modal wiring
+- `supabase/tests/jobs_flow.sql` (MODIFIED) — positive bid + edit assertions

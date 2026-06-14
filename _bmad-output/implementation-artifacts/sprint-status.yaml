@@ -66,7 +66,7 @@ development_status:
   2-2-provider-availability-signal: backlog # POC: deferred — simple feed + pull-to-refresh instead
   2-3-provider-job-discovery: done # POC: IN SCOPE — provider feed; code-reviewed + hardened (timeAgo guards, unmount-safe fetch, exclusion test); 24 jest + 78 pgTAP green (device E2E = manual smoke) 2026-06-12
   2-3b-role-gated-navigation: done # POC: IN SCOPE — resident/provider tabs by role; code-reviewed + hardened (sign-out role fix, deriveAuth extracted+tested, no refresh churn); 33 jest + 78 pgTAP green (device E2E = manual smoke) 2026-06-12
-  2-4-submit-a-bid: in-progress # POC: IN SCOPE — provider submits/edits a single price bid on a feed job under bids RLS; no subscription gate (deferred) (story created 2026-06-13)
+  2-4-submit-a-bid: review # POC: IN SCOPE — provider submits/edits a single price bid on a feed job under bids RLS; 40 jest + 82 pgTAP green (dev complete 2026-06-13; device E2E = manual smoke)
   2-5-broadcast-provider-notifications-backend: backlog # POC: IN SCOPE reduced — push-only via dispatcher interface + notification_log; SMS post-POC
   2-6-supply-aware-expectation-setting: backlog # POC: deferred
   2-7-empty-state-capture-concierge-backstop: backlog # POC: deferred — founder watches "unaccepted jobs" Studio view + WhatsApp fallback
