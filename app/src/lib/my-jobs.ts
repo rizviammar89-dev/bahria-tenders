@@ -37,7 +37,7 @@ export async function fetchMyJobs(): Promise<{ jobs: MyJob[]; error: string | nu
   const { data, error } = await supabase
     .from('jobs')
     .select(
-      'id, description, precinct, status, created_at, awarded_provider_id, service:services(display_en, display_ur), bids(id, price_pkr, note, provider:profiles(id, full_name, rating_sum, rating_count))',
+      'id, description, precinct, status, created_at, awarded_provider_id, service:services(display_en, display_ur), bids!bids_job_id_fkey(id, price_pkr, note, provider:profiles(id, full_name, rating_sum, rating_count))',
     )
     .eq('resident_id', uid)
     .neq('status', 'cancelled')
