@@ -22,7 +22,7 @@ export default function MyJobsScreen() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [awardingBidId, setAwardingBidId] = useState<string | null>(null); // only this bid's button disables
   const [message, setMessage] = useState<string | null>(null);
   const [contacts, setContacts] = useState<Record<string, JobContacts>>({});
   const mounted = useRef(true);
@@ -54,19 +54,20 @@ export default function MyJobsScreen() {
     }
   }, [load]);
 
-  async function onAward(jobId: string, providerId: string, providerName: string) {
-    if (busy) return;
-    setBusy(true);
+  async function onAward(jobId: string, bidId: string, providerId: string, providerName: string) {
+    if (awardingBidId) return; // an award is already in flight
+    setAwardingBidId(bidId);
     setMessage(null);
     const { error } = await awardJob(jobId, providerId);
+    if (!mounted.current) return;
     if (error) {
       console.warn('awardJob failed:', error);
       setMessage("Couldn't award the job — please refresh and try again.");
-      setBusy(false);
+      setAwardingBidId(null);
       return;
     }
     setMessage(`Awarded to ${providerName}. Tap "Show contact details" to coordinate.`);
-    setBusy(false);
+    setAwardingBidId(null);
     load();
   }
 
@@ -147,12 +148,12 @@ export default function MyJobsScreen() {
                       <Pressable
                         onPress={() =>
                           bid.provider &&
-                          onAward(item.id, bid.provider.id, bid.provider.full_name)
+                          onAward(item.id, bid.id, bid.provider.id, bid.provider.full_name)
                         }
-                        disabled={busy}
+                        disabled={awardingBidId !== null}
                         style={({ pressed }) => [styles.awardButton, pressed && styles.pressed]}>
                         <ThemedText type="default" style={styles.awardLabel}>
-                          Award
+                          {awardingBidId === bid.id ? 'Awarding…' : 'Award'}
                         </ThemedText>
                       </Pressable>
                     </ThemedView>

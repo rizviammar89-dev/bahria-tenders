@@ -51,10 +51,13 @@ begin
   if not found then
     raise exception 'Job not found.' using errcode = 'P0002';
   end if;
-  if not (
-    j.status in ('awarded', 'completed')
-    and (auth.uid() = j.resident_id or auth.uid() = j.awarded_provider_id)
-  ) then
+  -- Default-deny: auth.uid() must be non-null FIRST, else `uid = resident` is NULL (not false)
+  -- and the `if not (...)` below would evaluate to NULL → skip the raise → leak the phones.
+  if auth.uid() is null
+     or not (
+       j.status in ('awarded', 'completed')
+       and (auth.uid() = j.resident_id or auth.uid() = j.awarded_provider_id)
+     ) then
     raise exception 'Not authorized to view these contacts.' using errcode = '42501';
   end if;
   return query

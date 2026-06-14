@@ -4,7 +4,7 @@ baseline_commit: 04030e900cd89a579b60da1955f811e175c9665c
 
 # Story 2.8: Compare Bids & Award (FR-9, FR-10)
 
-Status: review
+Status: done
 
 <!-- Epic 2 / demand loop — the resident's payoff: see bids, choose on reputation (not price), award, exchange contact. Turns the loop into a HIRE. Translates the Bubble-era epic story 2.8 (FR-9, FR-10). This story has a MIGRATION (the first since 1.3): two SECURITY DEFINER RPCs — award_job (enforces open→awarded + provider-must-have-bid, which plain RLS can't) and get_job_contacts (reveals phones, which RLS hides from clients, only to the two parties of an awarded job). Plus a new resident "My Jobs" screen (no resident job-list existed). Adab (FR-14) + neighbor social proof (FR-5) are POC-deferred → bid cards show price + provider name + reputation-or-"New". -->
 
@@ -79,6 +79,25 @@ so that I hire on merit (not just lowest price) and we get each other's contact 
 - [Source: _bmad-output/implementation-artifacts/1-3-rls-and-grants.md] — phone column withheld from clients; jobs_update_own/jobs_select_visible/bids_select_party; the pgTAP auth-sim harness in rls.sql
 - [Source: _bmad-output/implementation-artifacts/2-3b-role-gated-navigation.md] — `roleTabs` + role-gated tab pattern to extend
 - [Source: _bmad-output/implementation-artifacts/2-4-submit-a-bid.md] — bids data-layer + RLS-safe embed; jobs_flow.sql fixtures as the model for award_flow.sql
+
+### Review Findings (code review 2026-06-13)
+
+**Note:** the 3-reviewer adversarial panel hit the session rate limit (returned no output), so this is a **self-review** (less independent) focused on the SECURITY DEFINER functions per the request. One Critical bug found and empirically verified.
+
+**Patch (applied 2026-06-13):**
+- [x] [Review][Patch] **CRITICAL leak fixed** — `get_job_contacts` now guards `auth.uid() is null` (default-deny) before the membership check. A null-identity caller raises 42501 instead of receiving the phones. Proven closed by the new pgTAP assertion.
+- [x] [Review][Patch] **pgTAP regression guard added** — `award_flow.sql`: "no contacts leaked when auth.uid() is null" (throws 42501) + "resident can still read contacts on a completed job" (lives_ok). 93 pgTAP green.
+- [x] [Review][Patch] **Per-bid award lock** — `awardingBidId` replaces the screen-global `busy`; only the tapped bid shows "Awarding…" and disables. Added an unmount guard on the async path too.
+
+**Deferred (later / post-POC):**
+- [x] [Review][Defer] Client double-award flashes a generic error on the loser — DB-safe (the RPC's `status='open'` guard rejects the second); polish later.
+- [x] [Review][Defer] `onShowContacts` has no loading/guard state — minor; add post-POC.
+- [x] [Review][Defer] The `referencedTable` bids-ordering in `fetchMyJobs` isn't unit-testable — verify in the device smoke.
+
+**Dismissed (correct / intended):**
+- "Both parties get both phones" — intended (FR-10 *mutual* exchange; the provider needs the resident's phone to coordinate).
+- `set search_path = public` + `revoke from public; grant authenticated` — correct hardening (Postgres grants EXECUTE to PUBLIC by default; the revoke removes it). Verified the lockdown is right.
+- `award_job` null-`auth.uid()` — SAFE: the `resident_id = auth.uid()` lives in a WHERE clause, so null → 0 rows → raises (unlike the IF-based `get_job_contacts`). Nice contrast that makes the fix obvious.
 
 ## Dev Agent Record
 

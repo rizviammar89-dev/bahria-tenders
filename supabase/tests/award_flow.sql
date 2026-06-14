@@ -87,6 +87,21 @@ select throws_ok(
   $$ select public.get_job_contacts('cccc0000-0000-0000-0000-000000000001') $$,
   '42501', null, 'a non-party cannot read the contacts');
 reset role;
+-- Default-deny: an authenticated context with NO identity (auth.uid() null) must NOT leak.
+set local role authenticated;
+select set_config('request.jwt.claims', '', true);
+select throws_ok(
+  $$ select public.get_job_contacts('cccc0000-0000-0000-0000-000000000001') $$,
+  '42501', null, 'no contacts leaked when auth.uid() is null');
+reset role;
+-- Contacts still work on a COMPLETED job (post-job coordination).
+update public.jobs set status = 'completed' where id = 'cccc0000-0000-0000-0000-000000000001';
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
+select lives_ok(
+  $$ select public.get_job_contacts('cccc0000-0000-0000-0000-000000000001') $$,
+  'the resident can still read contacts on a completed job');
+reset role;
 
 select * from finish();
 rollback;
