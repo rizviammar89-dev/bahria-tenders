@@ -125,9 +125,14 @@ claude-opus-4-8 (Amelia / dev-story)
 
 ### Spike Results (AC-6/AC-7 — fill during execution)
 
+**Execution device:** Samsung / One UI (NOT the aggressive Transsion/Xiaomi budget class the providers will use — see caveat in verdict).
+
+**Pipeline proven (2026-06-14):** dev build installed; EAS FCM V1 service-account key uploaded; `registerForPushAsync` returned `ExponentPushToken[1JzEtoL-…]`; immediate test push (`exp.host/--/api/v2/push/send`) returned ticket `019ec68c-…` and **getReceipts → status: ok** (FCM accepted + delivered). End-to-end token→Expo→FCM V1→device path confirmed working.
+
 | Condition | Delivered? | Delay | Device |
 |---|---|---|---|
-| Backgrounded 12h, default battery settings | | | |
-| Backgrounded 12h, optimization disabled | | | |
+| Immediate (app backgrounded), default settings | yes (receipt ok) | ~instant | Samsung/One UI |
+| Backgrounded ≥12h, default battery settings | _(soak pending)_ | | Samsung/One UI |
+| Backgrounded ≥12h, optimization disabled | _(soak pending)_ | | Samsung/One UI |
 
-**GO / NO-GO verdict:**
+**GO / NO-GO verdict:** _PENDING 12h soak._ Immediate delivery confirmed. **Caveat for whoever records the final verdict:** this device is Samsung (One UI), which is materially less battery-aggressive than the Tecno/Infinix/Redmi devices the target providers actually use — a GO here de-risks the *pipeline* but not the *budget-OEM doorbell*. Recommend one soak on a Transsion/Xiaomi device before treating push as field-reliable.
