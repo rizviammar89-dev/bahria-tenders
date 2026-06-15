@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { Brand, Spacing } from '@/constants/theme';
 import {
   awardJob,
   completeJob,
@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.four,
     borderRadius: Spacing.three,
-    backgroundColor: '#208AEF',
+    backgroundColor: Brand.primary,
     minHeight: 44,
     justifyContent: 'center',
   },

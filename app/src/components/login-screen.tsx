@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { Brand, Spacing } from '@/constants/theme';
 import { normalizePkPhone, phoneToSyntheticEmail } from '@/lib/phone';
 import { supabase } from '@/lib/supabase';
 
@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.two,
     paddingVertical: Spacing.three,
     borderRadius: Spacing.three,
-    backgroundColor: '#208AEF',
+    backgroundColor: Brand.primary,
     alignItems: 'center',
     minHeight: 52,
     justifyContent: 'center',

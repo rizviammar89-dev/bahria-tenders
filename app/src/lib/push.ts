@@ -6,6 +6,8 @@ import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
+import { Brand } from '@/constants/theme';
+
 export type PushResult =
   | { ok: true; token: string }
   | { ok: false; reason: string };
@@ -25,7 +27,7 @@ export async function registerForPushAsync(): Promise<PushResult> {
       name: 'Job alerts',
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#208AEF',
+      lightColor: Brand.primary,
     });
   }
 

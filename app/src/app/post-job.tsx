@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { Brand, Spacing } from '@/constants/theme';
 import { validateJobDraft } from '@/lib/job-draft';
 import { createJob, fetchMyPrecinct, fetchServices, type Service } from '@/lib/jobs';
 
@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
     justifyContent: 'center',
   },
-  chipSelected: { backgroundColor: '#208AEF', borderColor: '#208AEF' },
+  chipSelected: { backgroundColor: Brand.primary, borderColor: Brand.primary },
   chipLabelSelected: { color: '#ffffff' },
   input: {
     borderWidth: 1,
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.two,
     paddingVertical: Spacing.three,
     borderRadius: Spacing.three,
-    backgroundColor: '#208AEF',
+    backgroundColor: Brand.primary,
     alignItems: 'center',
     minHeight: 52,
     justifyContent: 'center',

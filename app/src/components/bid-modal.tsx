@@ -5,7 +5,7 @@ import { Modal, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { Brand, Spacing } from '@/constants/theme';
 import { validateBidInput } from '@/lib/bid-input';
 import { submitBid } from '@/lib/bids';
 import type { OpenJob } from '@/lib/jobs';
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     paddingHorizontal: Spacing.four,
     borderRadius: Spacing.three,
-    backgroundColor: '#208AEF',
+    backgroundColor: Brand.primary,
     minHeight: 52,
     justifyContent: 'center',
   },

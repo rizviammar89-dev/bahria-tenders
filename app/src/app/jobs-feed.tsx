@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BidModal } from '@/components/bid-modal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { Brand, Spacing } from '@/constants/theme';
 import { fetchOpenJobsForMyTrades, type OpenJob } from '@/lib/jobs';
 import { timeAgo } from '@/lib/time-ago';
 
@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.three,
     borderRadius: Spacing.three,
-    backgroundColor: '#208AEF',
+    backgroundColor: Brand.primary,
     alignSelf: 'flex-start',
     minHeight: 44,
     justifyContent: 'center',

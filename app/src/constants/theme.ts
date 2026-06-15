@@ -26,6 +26,18 @@ export const Colors = {
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
+/**
+ * Bahria Tenders brand palette (2026 brand kit). Single source of truth — reference
+ * `Brand.*` instead of hardcoding hex so a rebrand is a one-line change here.
+ */
+export const Brand = {
+  primary: '#1F2E24', // dark green — primary actions/buttons
+  accent: '#C8A45E', // gold — accents, highlights, selected states
+  sand: '#E7D8B5', // light tan
+  cream: '#F5F2EA', // off-white background
+  ink: '#333333', // near-black text
+} as const;
+
 export const Fonts = Platform.select({
   ios: {
     /** iOS `UIFontDescriptorSystemDesignDefault` */
