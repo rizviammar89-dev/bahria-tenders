@@ -131,8 +131,10 @@ claude-opus-4-8 (Amelia / dev-story)
 
 | Condition | Delivered? | Delay | Device |
 |---|---|---|---|
-| Immediate (app backgrounded), default settings | yes (receipt ok) | ~instant | Samsung/One UI |
-| Backgrounded ≥12h, default battery settings | _(soak pending)_ | | Samsung/One UI |
-| Backgrounded ≥12h, optimization disabled | _(soak pending)_ | | Samsung/One UI |
+| Immediate (app backgrounded), default settings | yes (receipt ok + seen on device) | ~instant | Samsung/One UI |
+| Backgrounded ≥12h, default battery settings | **NO** — not surfaced on device | n/a (receipt ok = reached FCM, never shown) | Samsung/One UI |
+| Backgrounded ≥12h, optimization disabled | _(soak pending — Round 2)_ | | Samsung/One UI |
+
+**Round 1 finding (2026-06-15):** App was **backgrounded via Home (NOT force-stopped/swiped)** and the phone sat idle overnight on **default battery settings**. Soak push (ticket `019ec99c-…`) returned **getReceipts status: ok** (Expo→FCM handoff succeeded) but **no notification appeared in the tray** — confirmed by checking the notification shade. The immediate-delivery test the night before (fresh background) DID arrive. Signature = Android Doze / app-standby / Samsung "Sleeping apps" suppressing FCM wake after long idle. This is the doorbell-failure mode the gate exists to catch. **Verdict hinges on Round 2** (battery-optimization-disabled): if push then arrives reliably, the gate is a CONDITIONAL GO requiring the onboarding "disable battery optimization" step; if it still fails, NO-GO → SMS back into POC scope.
 
 **GO / NO-GO verdict:** _PENDING 12h soak._ Immediate delivery confirmed. **Caveat for whoever records the final verdict:** this device is Samsung (One UI), which is materially less battery-aggressive than the Tecno/Infinix/Redmi devices the target providers actually use — a GO here de-risks the *pipeline* but not the *budget-OEM doorbell*. Recommend one soak on a Transsion/Xiaomi device before treating push as field-reliable.
