@@ -1,7 +1,7 @@
 // Story 2.8: the resident's My Jobs — compare bids (NOT cheapest-sorted), award on merit,
 // then reveal contact details. Award + contacts go through SECURITY DEFINER RPCs.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, StyleSheet } from 'react-native';
+import { FlatList, Pressable, RefreshControl, StyleSheet, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -12,9 +12,11 @@ import {
   completeJob,
   fetchMyJobs,
   getJobContacts,
+  submitRating,
   type JobContacts,
   type MyJob,
 } from '@/lib/my-jobs';
+import { isValidStars } from '@/lib/rating';
 import { reputationLabel } from '@/lib/reputation';
 
 const STATUS_LABEL: Record<MyJob['status'], string> = {
@@ -33,6 +35,9 @@ export default function MyJobsScreen() {
   const [completingJobId, setCompletingJobId] = useState<string | null>(null); // only this job's button disables
   const [message, setMessage] = useState<string | null>(null);
   const [contacts, setContacts] = useState<Record<string, JobContacts>>({});
+  const [ratingJobId, setRatingJobId] = useState<string | null>(null); // only this job's submit disables
+  const [starDraft, setStarDraft] = useState<Record<string, number>>({}); // per-job selected stars
+  const [reviewDraft, setReviewDraft] = useState<Record<string, string>>({}); // per-job review text
   const mounted = useRef(true);
 
   const load = useCallback(async () => {
@@ -96,6 +101,29 @@ export default function MyJobsScreen() {
     // re-enables the button and a fast re-tap can't trigger a spurious "couldn't complete" error.
     await load();
     if (mounted.current) setCompletingJobId(null);
+  }
+
+  async function onSubmitRating(jobId: string, providerId: string) {
+    const stars = starDraft[jobId] ?? 0;
+    if (!isValidStars(stars)) {
+      setMessage('Please choose 1–5 stars first.');
+      return;
+    }
+    if (ratingJobId) return; // a rating submit is already in flight
+    setRatingJobId(jobId);
+    setMessage(null);
+    const { error } = await submitRating({ jobId, providerId, stars, review: reviewDraft[jobId] });
+    if (!mounted.current) return;
+    if (error) {
+      console.warn('submitRating failed:', error);
+      setMessage("Couldn't submit your rating — please try again.");
+      setRatingJobId(null);
+      return;
+    }
+    setMessage('Thanks — your rating was saved.');
+    // Keep the lock until the refresh lands so the embedded rating renders the rated state.
+    await load();
+    if (mounted.current) setRatingJobId(null);
   }
 
   async function onShowContacts(jobId: string) {
@@ -218,14 +246,64 @@ export default function MyJobsScreen() {
                 </>
               )}
 
-              {item.status === 'completed' && (
-                <ThemedView type="background" style={styles.contactBox}>
-                  <ThemedText type="small" themeColor="textSecondary">
-                    Completed — thanks for closing this out.
-                  </ThemedText>
-                  {/* Story 3.1 seam: a "Rate this job" affordance goes here. */}
-                </ThemedView>
-              )}
+              {item.status === 'completed' &&
+                (item.rating ? (
+                  // Story 3.1: rated state — read-only (ratings are write-once).
+                  <ThemedView type="background" style={styles.contactBox}>
+                    <ThemedText type="smallBold">
+                      {'★'.repeat(item.rating.stars)}
+                      {'☆'.repeat(5 - item.rating.stars)} · You rated this {item.rating.stars}/5
+                    </ThemedText>
+                    {item.rating.review ? (
+                      <ThemedText type="small" themeColor="textSecondary">
+                        “{item.rating.review}”
+                      </ThemedText>
+                    ) : null}
+                  </ThemedView>
+                ) : (
+                  // Story 3.1: rate control — 1–5 stars + optional review.
+                  <ThemedView type="background" style={styles.contactBox}>
+                    <ThemedText type="smallBold">Rate this job</ThemedText>
+                    <ThemedView type="background" style={styles.starRow}>
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <Pressable
+                          key={n}
+                          onPress={() => setStarDraft((prev) => ({ ...prev, [item.id]: n }))}
+                          hitSlop={8}
+                          style={styles.star}>
+                          <ThemedText type="title">
+                            {(starDraft[item.id] ?? 0) >= n ? '★' : '☆'}
+                          </ThemedText>
+                        </Pressable>
+                      ))}
+                    </ThemedView>
+                    <TextInput
+                      value={reviewDraft[item.id] ?? ''}
+                      onChangeText={(t) =>
+                        setReviewDraft((prev) => ({ ...prev, [item.id]: t }))
+                      }
+                      placeholder="Add a short review (optional)"
+                      multiline
+                      style={styles.reviewInput}
+                    />
+                    <Pressable
+                      onPress={() =>
+                        item.awarded_provider_id &&
+                        onSubmitRating(item.id, item.awarded_provider_id)
+                      }
+                      disabled={!isValidStars(starDraft[item.id] ?? 0) || ratingJobId !== null}
+                      style={({ pressed }) => [
+                        styles.completeButton,
+                        (!isValidStars(starDraft[item.id] ?? 0) || ratingJobId !== null) &&
+                          styles.disabledButton,
+                        pressed && styles.pressed,
+                      ]}>
+                      <ThemedText type="default" style={styles.awardLabel}>
+                        {ratingJobId === item.id ? 'Submitting…' : 'Submit rating'}
+                      </ThemedText>
+                    </Pressable>
+                  </ThemedView>
+                ))}
             </ThemedView>
           )}
         />
@@ -270,6 +348,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: Spacing.two,
   },
-  contactBox: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.half },
+  contactBox: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.two },
+  starRow: { flexDirection: 'row', gap: Spacing.two },
+  star: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  reviewInput: {
+    borderWidth: 1,
+    borderColor: '#888',
+    borderRadius: Spacing.two,
+    padding: Spacing.three,
+    fontSize: 16,
+    minHeight: 60,
+    textAlignVertical: 'top',
+  },
+  disabledButton: { opacity: 0.5 },
   pressed: { opacity: 0.7 },
 });

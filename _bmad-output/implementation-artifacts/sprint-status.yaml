@@ -74,8 +74,8 @@ development_status:
   2-9-offline-completion-mark-complete: done # POC: IN SCOPE — story created 2026-06-15; reviewed (3-layer panel) + DEVICE E2E SMOKE CONFIRMED 2026-06-15 (mark-complete + full open→award→complete lifecycle); complete_job SECURITY DEFINER RPC (mirrors award_job) + Mark-complete on My Jobs; gates rating (3-1)
   epic-2-retrospective: optional
 
-  epic-3: backlog # POC: reduced — write-once rating + aggregates only
-  3-1-rate-the-result: backlog # POC: IN SCOPE
+  epic-3: in-progress # POC: reduced — write-once rating + aggregates only
+  3-1-rate-the-result: review # POC: IN SCOPE — story created 2026-06-15; no migration/RPC (ratings RLS already enforces); rating insert + star UI; reputation increment is 3.3
   3-2-adab-score: backlog # POC: deferred
   3-3-reputation-aggregation-recompute: backlog # POC: IN SCOPE (translated) — SECURITY DEFINER fn increments + admin recompute SQL
   3-4-humanized-provider-card-profile: backlog # POC: deferred — simple card (stars + job count) ships inside 2-8

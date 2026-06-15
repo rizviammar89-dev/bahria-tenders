@@ -19,6 +19,7 @@ export type MyJob = {
   awarded_provider_id: string | null;
   service: { display_en: string; display_ur: string } | null;
   bids: BidWithProvider[];
+  rating: { stars: number; review: string | null } | null;
 };
 
 export type JobContacts = {
@@ -37,19 +38,50 @@ export async function fetchMyJobs(): Promise<{ jobs: MyJob[]; error: string | nu
   const { data, error } = await supabase
     .from('jobs')
     .select(
-      'id, description, precinct, status, created_at, awarded_provider_id, service:services(display_en, display_ur), bids!bids_job_id_fkey(id, price_pkr, note, provider:profiles(id, full_name, rating_sum, rating_count))',
+      'id, description, precinct, status, created_at, awarded_provider_id, service:services(display_en, display_ur), bids!bids_job_id_fkey(id, price_pkr, note, provider:profiles(id, full_name, rating_sum, rating_count)), rating:ratings(stars, review)',
     )
     .eq('resident_id', uid)
     .neq('status', 'cancelled')
     .order('created_at', { ascending: false })
     .order('created_at', { referencedTable: 'bids', ascending: true });
   if (error) return { jobs: [], error: error.message };
-  return { jobs: (data ?? []) as unknown as MyJob[], error: null };
+  // `rating:ratings(...)` may arrive as an array (PostgREST embed) even though ratings_one_per_job
+  // makes it at most one — normalize to a single object|null so the screen can read it directly.
+  const jobs = (data ?? []).map((j) => {
+    const r = (j as { rating?: unknown }).rating;
+    const rating = Array.isArray(r) ? (r[0] ?? null) : (r ?? null);
+    return { ...j, rating };
+  }) as unknown as MyJob[];
+  return { jobs, error: null };
 }
 
 /** Award an open job to a provider who bid (SECURITY DEFINER RPC enforces the rules). */
 export async function awardJob(jobId: string, providerId: string): Promise<{ error: string | null }> {
   const { error } = await supabase.rpc('award_job', { p_job_id: jobId, p_provider_id: providerId });
+  return { error: error ? error.message : null };
+}
+
+/**
+ * Submit a one-time 1–5 rating (+ optional review) for a completed job.
+ * No RPC: the plain insert rides RLS `ratings_insert_valid` (attribution + completed-gate +
+ * awarded-provider match) and write-once (no update/delete grant + unique(job_id)).
+ */
+export async function submitRating(args: {
+  jobId: string;
+  providerId: string;
+  stars: number;
+  review?: string;
+}): Promise<{ error: string | null }> {
+  const { data: userData } = await supabase.auth.getUser();
+  const uid = userData.user?.id;
+  if (!uid) return { error: 'You are not signed in.' };
+  const { error } = await supabase.from('ratings').insert({
+    job_id: args.jobId,
+    provider_id: args.providerId,
+    resident_id: uid,
+    stars: args.stars,
+    review: args.review?.trim() || null,
+  });
   return { error: error ? error.message : null };
 }
 
