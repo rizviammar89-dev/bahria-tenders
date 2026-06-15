@@ -53,6 +53,12 @@ export async function awardJob(jobId: string, providerId: string): Promise<{ err
   return { error: error ? error.message : null };
 }
 
+/** Mark an awarded job completed (SECURITY DEFINER RPC enforces awarded→completed + ownership). */
+export async function completeJob(jobId: string): Promise<{ error: string | null }> {
+  const { error } = await supabase.rpc('complete_job', { p_job_id: jobId });
+  return { error: error ? error.message : null };
+}
+
 /** Reveal both parties' phones for an awarded job (caller must be a party). */
 export async function getJobContacts(
   jobId: string,
