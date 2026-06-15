@@ -77,7 +77,7 @@ development_status:
   epic-3: in-progress # POC: reduced — write-once rating + aggregates only
   3-1-rate-the-result: done # POC: IN SCOPE — story created 2026-06-15; reviewed (edge-hunter independent + self-review on 2 layers, 529 overload) + 1 patch; 110 pgTAP + 49 jest; DEVICE E2E SMOKE CONFIRMED 2026-06-15 (star picker + submit + read-only rated state; reputation correctly unchanged until 3.3); no migration/RPC (ratings RLS already enforces); rating insert + star UI; reputation increment is 3.3
   3-2-adab-score: backlog # POC: deferred
-  3-3-reputation-aggregation-recompute: backlog # POC: IN SCOPE (translated) — SECURITY DEFINER fn increments + admin recompute SQL
+  3-3-reputation-aggregation-recompute: review # POC: IN SCOPE (translated) — story created 2026-06-15; built + 117 pgTAP green; CR deferred (API 529); SECURITY DEFINER increment trigger + recompute_reputation() (admin-only); closes 3.1 AC-6; DB-only, no app change
   3-4-humanized-provider-card-profile: backlog # POC: deferred — simple card (stars + job count) ships inside 2-8
   3-5-neighbor-social-proof: backlog # POC: deferred
   epic-3-retrospective: optional
