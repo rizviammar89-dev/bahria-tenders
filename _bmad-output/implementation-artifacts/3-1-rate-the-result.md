@@ -101,7 +101,7 @@ claude-opus-4-8 (Amelia / dev-story)
 - **`fetchMyJobs` embeds `rating:ratings(stars, review)`** (unambiguous — one FK jobs↔ratings, unlike [[jobs-bids-embed-ambiguity]]) and normalizes a possible array→object so the screen reads `job.rating` directly.
 - **Reputation does NOT move yet (AC-6 boundary, Story 3.3):** `reputationLabel` reads `profiles.rating_sum`/`rating_count`, which only 3.3's increment writes. So a rated provider still shows "New provider" on bid cards in the POC — expected, documented, NOT a bug. Did not pull 3.3 forward.
 - **Scope held:** overall 1–5 + optional review only. No Adab (3.2), no reputation increment (3.3), no provider-facing card (3.4), no social proof (3.5).
-- **⚠️ Device E2E = manual smoke:** the star picker + submit + rated-state render need a device against LAN-IP Supabase. Reuse a completed job from the 2.9 smoke (re-provision + reseed + complete a job, then rate it). The insert authz + write-once core is fully pgTAP-proven.
+- **✅ Device E2E smoke CONFIRMED 2026-06-15:** on the Android dev build against LAN-IP Supabase, resident logged in → My Jobs → on a completed job: star picker filled correctly, Submit disabled until ≥1 star, submitted with a review → flipped to the read-only rated state (★ + review), re-rate control gone (write-once). Confirmed reputation does NOT move yet (provider still "New provider" — AC-6 boundary, Story 3.3). Reused the two completed jobs from the 2.9 smoke (no reseed needed). The insert authz + write-once core is also fully pgTAP-proven.
 
 ### File List
 
