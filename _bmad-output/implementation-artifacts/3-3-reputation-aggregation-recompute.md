@@ -86,7 +86,7 @@ claude-opus-4-8 (Amelia / dev-story)
 - **Scope held:** only `rating_sum`/`rating_count` (no Adab columns — 3.2 deferred); no cached `avg_rating` column (computed on read by `reputationLabel`); no in-app recompute button (founder runs `select public.recompute_reputation();` in Studio — POC-deferred).
 - **No app code change** (the screen already consumes the components) — verified via the regression gate.
 - **Code review:** deferred this session due to the API 529 overload affecting the adversarial subagent panel. The security core (trigger authz + recompute lockdown + rebuild-from-source) is fully pgTAP-proven. Recommend an independent `/code-review` pass when the backend recovers.
-- **⚠️ Device E2E = manual smoke:** rate a job (3.1) → pull-to-refresh a screen that shows that provider on a bid card → confirm the label changed from "New provider" to "<avg> from <n> jobs".
+- **✅ Device E2E smoke CONFIRMED 2026-06-15:** seeded a completed job awarded to Test Provider + an open job where Test Provider and Imran both bid (both starting "New provider"). On the Android dev build: rated Test Provider 5★ on the completed job → pull-to-refresh → Test Provider's bid card flipped to "5.0 from 1 jobs" while Imran stayed "New provider". Confirms the AFTER-INSERT trigger increments reputation immediately and it surfaces via `reputationLabel`. The trigger authz + recompute lockdown are also fully pgTAP-proven.
 
 ### File List
 
