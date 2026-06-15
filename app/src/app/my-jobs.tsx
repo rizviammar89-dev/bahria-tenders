@@ -121,6 +121,9 @@ export default function MyJobsScreen() {
       return;
     }
     setMessage('Thanks — your rating was saved.');
+    // Drop this job's drafts — the rated state is read-only now, so they'd only linger.
+    setStarDraft(({ [jobId]: _s, ...rest }) => rest);
+    setReviewDraft(({ [jobId]: _r, ...rest }) => rest);
     // Keep the lock until the refresh lands so the embedded rating renders the rated state.
     await load();
     if (mounted.current) setRatingJobId(null);

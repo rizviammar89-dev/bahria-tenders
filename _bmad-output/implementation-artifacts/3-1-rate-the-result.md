@@ -4,7 +4,7 @@ baseline_commit: 0f17ed3d0f2ea5636db5d8a79d0634dbcf5b8c64
 
 # Story 3.1: Rate the Result (FR-13)
 
-Status: review
+Status: done
 
 <!-- Epic 3 / reputation — the payoff of the loop: a completed job becomes a permanent Rating. After 2.9 produces the `completed` state, the resident scores the provider 1–5 with an optional review. NO MIGRATION and NO RPC needed — the `ratings` table (1.2) and its RLS (1.3) already enforce everything: correct attribution (resident_id=auth.uid()), the completed-gate + awarded-provider match (ratings_insert_valid), and write-once (SELECT+INSERT grants only, no update/delete, unique(job_id)). So a plain client INSERT is fully constrained — a deliberate contrast to the SECURITY DEFINER RPCs of 2.8/2.9. The reputation INCREMENT (rating_sum/rating_count on profiles) is Story 3.3, NOT this story; Adab (FR-14) is deferred. -->
 
@@ -68,6 +68,18 @@ so that good work is rewarded, bad work has consequences, and the provider's rep
 - [Source: supabase/migrations/20260613063734_rls_policies.sql] — `ratings_insert_valid` (attribution + completed-gate + awarded-provider match), `ratings_select_all`, write-once via grant model.
 - [Source: _bmad-output/implementation-artifacts/2-9-offline-completion-mark-complete.md] — the `completed` state this story builds on; My Jobs screen patterns (per-job lock, await load(), {error} shape).
 - [Source: _bmad-output/implementation-artifacts/2-8-compare-and-award.md] — `reputationLabel` reads profiles.rating_sum/rating_count (why reputation won't move until 3.3); fetchMyJobs embed pattern.
+
+### Review Findings (code review 2026-06-15)
+
+**Note:** the Blind Hunter + Acceptance Auditor subagents hit sustained API 529 overloads (returned no output after retries), so those two layers were run as a **self-review** (less independent) by the orchestrator. The **Edge Case Hunter layer ran independently**. The security core (ratings insert authz + write-once) is fully pgTAP-proven regardless.
+
+- [x] [Review][Patch] Stale `starDraft`/`reviewDraft` entries lingered after a successful submit — FIXED: `onSubmitRating` now drops the job's drafts on success (rated state is read-only). [app/src/app/my-jobs.tsx:124]
+- [x] [Review][Defer] Global `ratingJobId` lock disables all submit buttons while any one is in flight — intended single-flight, mirrors `completingJobId`. [app/src/app/my-jobs.tsx] — deferred, consistent with 2.9
+- [x] [Review][Defer] Shared `message` can be clobbered by a concurrent handler — pre-existing pattern shared across onAward/onComplete/onShowContacts. [app/src/app/my-jobs.tsx] — deferred, pre-existing
+
+**Dismissed (verified false positives):** "rating embed could be a truthy empty object → stars undefined" (`ratings.stars` is NOT NULL and is in the select, so a present row always has stars); "null `awarded_provider_id` on a completed job → silent submit no-op" (schema CHECK `jobs_awarded_requires_provider_chk` guarantees completed ⇒ provider non-null); "draft-map sync race" (not grounded — drafts are keyed by job id, set synchronously).
+
+**Self-review (correctness + acceptance):** star math safe (`5 - stars` with stars ∈ NOT-NULL CHECK 1..5 → never negative); `submitRating` gates on uid then defers to RLS; `await load()` ordering carries the 2.9 fix; all 7 ACs verified satisfied incl. AC-6 boundary (no reputation increment pulled forward).
 
 ## Dev Agent Record
 
