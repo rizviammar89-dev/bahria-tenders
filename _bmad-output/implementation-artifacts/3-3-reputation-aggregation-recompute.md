@@ -4,7 +4,7 @@ baseline_commit: f11e07ceef943b41eeab2958d1fbf6135a1350a3
 
 # Story 3.3: Reputation Aggregation & Recompute (FR-4, NFR-1)
 
-Status: review
+Status: done
 
 <!-- Epic 3 / reputation — the server-side machinery that turns 3.1's Rating rows into the cached raw components (profiles.rating_sum / rating_count) that reputationLabel (2.8) already reads. This CLOSES the 3.1 AC-6 boundary: after this story a rated provider's average shows on bid cards instead of "New provider". MIGRATION-ONLY (DB), NO app code change. Two pieces: (1) a SECURITY DEFINER trigger on `ratings` AFTER INSERT that increments the awarded provider's components — required because `authenticated` has NO update grant on rating_sum/rating_count (Story 1.3); (2) a SECURITY DEFINER `recompute_reputation()` that rebuilds the components from all ratings (the NFR-1 rebuildable-from-source fallback), admin/service_role-only. Adab sums are deferred (Story 3.2 not built → no adab columns exist). The admin "Recompute" BUTTON is deferred (founder runs the SQL via Studio per the POC). -->
 
@@ -66,6 +66,17 @@ so that it stays permanent, consistent, immediate, and rebuildable — and canno
 - [Source: _bmad-output/implementation-artifacts/3-1-rate-the-result.md] — produces the `ratings` rows this trigger consumes; AC-6 boundary this story closes.
 - [Source: _bmad-output/implementation-artifacts/2-8-compare-and-award.md] — `reputationLabel` reads rating_sum/rating_count (no app change needed here).
 
+### Review Findings (code review 2026-06-15)
+
+Full 3-layer adversarial panel ran independently (the earlier 529 overload cleared). All 5 ACs confirmed satisfied; the increment trigger (SECURITY DEFINER, fires under the least-privileged resident via the RLS path) and the `recompute_reputation` lockdown (authenticated → 42501) are pgTAP-proven.
+
+- [x] [Review][Patch] recompute↔trigger divergence — `recompute_reputation()` only rebuilt `role='provider'` rows, so a rating mis-applied to a non-provider profile (only reachable via a service_role insert bypassing RLS) would never be reconciled. FIXED: recompute now rebuilds ALL profiles (non-providers resolve to 0/0), making it the authoritative source-of-truth. New pgTAP asserts a phantom non-provider counter is zeroed. [supabase/migrations/20260615150000_reputation_aggregation.sql]
+- [x] [Review][Patch] write-once assumption now documented — added a comment pinning that the INSERT-only trigger is sufficient because ratings are write-once, and what to do if update/delete is ever granted. [supabase/migrations/20260615150000_reputation_aggregation.sql]
+- [x] [Review][Defer] trigger trusts `new.provider_id` for service_role inserts (no role check) — the authenticated path is fully constrained by `ratings_insert_valid`; no service_role rating-insert code exists, and recompute (now all-profiles) self-reconciles. Defensive-only. — deferred
+- [x] [Review][Defer] `recompute_reputation` relies on grant-only lockdown (no in-body auth check) — correct for the threat model (client roles revoked; service_role is the intended admin caller, matching the award/complete RPC pattern); 42501-for-authenticated is pgTAP-proven. — deferred, consistent with established pattern
+
+**Dismissed (verified):** smallint-sum→integer overflow (needs ~429M ratings on one provider — unreachable); recompute concurrency/idempotency (UPDATE is atomic; idempotent by construction); cascade-orphan ratings (ratings→profiles FK is RESTRICT, blocks the delete); "1 jobs" grammar (that's `reputationLabel` in 2.8, out of scope).
+
 ## Dev Agent Record
 
 ### Agent Model Used
@@ -75,7 +86,7 @@ claude-opus-4-8 (Amelia / dev-story)
 ### Debug Log References
 
 - `supabase db reset` → all 5 migrations replay clean (incl. `20260615150000_reputation_aggregation`)
-- `supabase test db` → 117 passed (reputation_flow 7 + rating_flow + award_flow + complete_flow + jobs_flow + rls + schema + smoke); `rls.sql` reputation-lockdown assertions still green
+- `supabase test db` → 119 passed (reputation_flow 9 incl. the 2 post-review assertions + rating_flow + award_flow + complete_flow + jobs_flow + rls + schema + smoke); `rls.sql` reputation-lockdown assertions still green
 - `npx jest` → 49 passed; `npx tsc --noEmit` + `npx expo lint` → clean (no app change)
 
 ### Completion Notes List

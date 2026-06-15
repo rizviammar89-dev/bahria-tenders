@@ -80,5 +80,14 @@ select results_eq(
   $$ values (0, 0) $$,
   'recompute zeroes a provider with no ratings');
 
+-- Recompute reconciles ALL profiles (not just providers): a non-provider with a phantom
+-- counter (only reachable via a service_role bypass) is zeroed too — no trigger↔recompute divergence.
+update public.profiles set rating_sum=5, rating_count=1 where id='11111111-1111-1111-1111-111111111111';
+select lives_ok($$ select public.recompute_reputation() $$, 'recompute runs again');
+select results_eq(
+  $$ select rating_sum, rating_count from public.profiles where id='11111111-1111-1111-1111-111111111111' $$,
+  $$ values (0, 0) $$,
+  'recompute zeroes a non-provider profile that had phantom reputation');
+
 select * from finish();
 rollback;

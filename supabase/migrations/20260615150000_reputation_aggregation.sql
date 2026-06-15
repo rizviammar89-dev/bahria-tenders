@@ -7,6 +7,9 @@
 -- ============================================================
 -- apply_rating_to_reputation — AFTER INSERT ON ratings: increment the rated provider's
 -- raw components immediately (same txn as the rating insert → FR-13 "immediately").
+-- INSERT-only is sufficient because ratings are write-once (Story 1.3: SELECT/INSERT grants
+-- only, no update/delete, unique(job_id)). If an update/delete grant is ever added, add the
+-- matching trigger(s) OR rely on recompute_reputation() to rebuild from source.
 -- ============================================================
 create or replace function public.apply_rating_to_reputation()
 returns trigger
@@ -28,8 +31,11 @@ create trigger ratings_reputation_after_insert
   for each row execute function public.apply_rating_to_reputation();
 
 -- ============================================================
--- recompute_reputation — NFR-1 rebuild-from-source fallback. Rebuilds EVERY provider's
--- raw components from the ratings table (providers with no ratings reset to 0/0).
+-- recompute_reputation — NFR-1 rebuild-from-source fallback. Rebuilds EVERY profile's
+-- raw components from the ratings table (anyone with no ratings resets to 0/0). Covers ALL
+-- profiles, not just providers, so it is the authoritative source-of-truth: if a rating ever
+-- landed on a non-provider profile (only possible via a service_role insert bypassing RLS),
+-- this still reconciles that row — closing any trigger↔recompute divergence.
 -- Admin/service_role only — revoked from all client roles; the founder runs it via Studio:
 --   select public.recompute_reputation();
 -- ============================================================
@@ -48,7 +54,6 @@ begin
              (select sum(r.stars) from public.ratings r where r.provider_id = pr.id) as s,
              (select count(*)     from public.ratings r where r.provider_id = pr.id) as c
       from public.profiles pr
-      where pr.role = 'provider'
     ) agg
     where p.id = agg.id;
 end;
