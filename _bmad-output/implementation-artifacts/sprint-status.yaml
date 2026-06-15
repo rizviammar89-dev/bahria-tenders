@@ -71,7 +71,7 @@ development_status:
   2-6-supply-aware-expectation-setting: backlog # POC: deferred
   2-7-empty-state-capture-concierge-backstop: backlog # POC: deferred — founder watches "unaccepted jobs" Studio view + WhatsApp fallback
   2-8-compare-and-award: done # POC: IN SCOPE — resident My Jobs + compare + award + contact reveal; self-reviewed + hardened (CRITICAL null-uid phone-leak fixed, per-bid award lock); 45 jest + 93 pgTAP green; DEVICE E2E SMOKE CONFIRMED 2026-06-14 (load+compare+award+contact-reveal on Android dev build) after fixing runtime PGRST201 ambiguous jobs↔bids embed (4c029e1)
-  2-9-offline-completion-mark-complete: review # POC: IN SCOPE — story created 2026-06-15; complete_job SECURITY DEFINER RPC (mirrors award_job) + Mark-complete on My Jobs; gates rating (3-1)
+  2-9-offline-completion-mark-complete: done # POC: IN SCOPE — story created 2026-06-15; complete_job SECURITY DEFINER RPC (mirrors award_job) + Mark-complete on My Jobs; gates rating (3-1)
   epic-2-retrospective: optional
 
   epic-3: backlog # POC: reduced — write-once rating + aggregates only

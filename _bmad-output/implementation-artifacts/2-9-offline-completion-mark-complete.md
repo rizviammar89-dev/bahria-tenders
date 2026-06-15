@@ -4,7 +4,7 @@ baseline_commit: b2613f169d96b287e91ad2102a30601ed0f7b1ec
 
 # Story 2.9: Offline Completion & Mark Complete (FR-11, FR-12)
 
-Status: review
+Status: done
 
 <!-- Epic 2 / demand loop — the close-out step. After 2.8 turns the loop into a HIRE (award + contact exchange), the job is executed and paid OFFLINE (cash, no in-app payment — FR-11). This story gives the resident the action to mark the awarded job COMPLETED (FR-12), which is the gate that unlocks rating (Epic 3 / Story 3.1). One small MIGRATION: a third SECURITY DEFINER RPC `complete_job`, mirroring 2.8's `award_job` (enforces the awarded→completed transition + ownership, which plain RLS can't). Plus a "Mark complete" affordance + a completed state on the existing My Jobs screen. NO rating here (3-1), NO payment (FR-11 is a deliberate non-feature), NO auto-prompt fallback (deferred). -->
 
@@ -69,6 +69,17 @@ so that the job is closed out and I can then rate it.
 - [Source: supabase/migrations/20260613063734_rls_policies.sql] — `jobs_update_own` + column-scoped `grant update (status, …)` (why RLS alone can't enforce the transition); ratings insert policy requires `status='completed'` (the completion→rating gate); `jobs_awarded_requires_provider_chk` CHECK.
 - [Source: _bmad-output/implementation-artifacts/1-2-core-data-model-schema.md] — `job_status` enum (open/awarded/completed/cancelled), `jobs_awarded_requires_provider_chk`.
 - [Source: _bmad-output/implementation-artifacts/1-3-rls-and-grants.md] — the pgTAP auth-sim harness (`set local role authenticated` + `request.jwt.claims`) to reuse for `complete_flow.sql`.
+
+### Review Findings (code review 2026-06-15)
+
+3-layer adversarial panel (Blind Hunter + Edge Case Hunter + Acceptance Auditor). The SECURITY DEFINER `complete_job` RPC was confirmed authorization-correct and atomic by all three (no TOCTOU, fail-closed on null `auth.uid()`, one-way transition, hardening trio present, full deny matrix pgTAP-proven). All 6 ACs verified satisfied.
+
+- [x] [Review][Patch] Spurious error toast on re-tap during the post-success `load()` window — FIXED: `onComplete` now `await`s `load()` and clears `completingJobId` only after the refresh lands (button stays disabled through the refresh; the row then renders as completed). [app/src/app/my-jobs.tsx:82]
+- [x] [Review][Defer] Shared `message` state can be clobbered by a concurrent `onShowContacts` — minor UX; pre-existing pattern, applies equally to 2.8's `onAward`. [app/src/app/my-jobs.tsx] — deferred, pre-existing
+- [x] [Review][Defer] "Mark complete" button on all awarded jobs disables while any one completion is in flight — intended single-flight, mirrors 2.8's `awardingBidId` coupling. [app/src/app/my-jobs.tsx:209] — deferred, pre-existing
+- [x] [Review][Defer] `42501` + generic client message conflates distinct failures (forbidden / not-awarded / already-completed) — no info leak; matches `award_job`. [supabase/migrations/20260615120000_complete_job.sql:26] — deferred, pre-existing
+
+**Dismissed (verified false positives):** `completingJobId` "stuck across remounts" (local state resets on unmount); complete_job "missing null awarded_provider_id guard" (CHECK constraint makes that state impossible); "stale contacts map" (completed branch never renders contacts); "double-tap race" (guarded by the in-flight check + sync setState).
 
 ## Dev Agent Record
 

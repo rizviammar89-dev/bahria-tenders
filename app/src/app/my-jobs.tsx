@@ -92,8 +92,10 @@ export default function MyJobsScreen() {
       return;
     }
     setMessage('Job marked complete.');
-    setCompletingJobId(null);
-    load();
+    // Keep the in-flight lock until the refresh lands, so the stale (still-awarded) row never
+    // re-enables the button and a fast re-tap can't trigger a spurious "couldn't complete" error.
+    await load();
+    if (mounted.current) setCompletingJobId(null);
   }
 
   async function onShowContacts(jobId: string) {

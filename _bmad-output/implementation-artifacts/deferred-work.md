@@ -48,3 +48,8 @@
 - **Awarded provider can see losing bids post-award** — `bids_select_party` doesn't filter by status. Design choice, not a trust invariant; revisit in marketplace-fairness work.
 - **service_role RLS-bypass tested only on profiles** — extend coverage to jobs/bids/disputes/notification_log when convenient.
 - **Job state-machine ordering not enforced** (founder decision: defer to Epic 2) — RLS lets the resident set any `status`/`awarded_provider_id` value on their own job (e.g. `completed→open`, or jump `open→completed`). The 1.2 composite FK already forces the awarded provider to be a real bidder, so the residual risk is sequencing/griefing, not arbitrary award. Enforce valid transitions in the **award (Story 2.8)** and **mark-complete (Story 2.9)** flows via their Edge Function / a `BEFORE UPDATE` trigger. Until then, the resident legitimately drives these transitions (the intended POC flow).
+
+## Deferred from: code review of story-2.9 (2026-06-15)
+- Shared `message` state can be clobbered by a concurrent `onShowContacts` call in my-jobs.tsx (minor UX; pre-existing pattern shared with 2.8 onAward).
+- "Mark complete" disables on all awarded jobs while any one completion is in flight (intended single-flight; mirrors 2.8 awardingBidId).
+- complete_job raises 42501 for all deny paths + generic client message conflates forbidden/not-awarded/already-completed (no leak; matches award_job).
