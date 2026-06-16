@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
     height: 180,
     opacity: 0.5,
     marginTop: -40,
-    transform: [{ scale: 1.5 }],
+    transform: [{ scale: 1.25 }],
   },
   safeArea: {
     flex: 1,
