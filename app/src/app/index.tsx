@@ -17,20 +17,21 @@ export default function HomeScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      {/* Brand watermark: faint Bahria Town skyline behind the content (mockup look). */}
-      <Image
-        source={require('@/assets/images/watermark.png')}
-        style={styles.watermark}
-        contentFit="contain"
-        pointerEvents="none"
-        accessibilityElementsHidden
-      />
       <SafeAreaView style={styles.safeArea}>
         <Image
           source={require('@/assets/images/logo-horizontal.png')}
           style={styles.logo}
           contentFit="contain"
           accessibilityLabel="Bahria Tenders"
+        />
+
+        {/* Brand watermark: Bahria Town skyline, below the logo + above the hero text. */}
+        <Image
+          source={require('@/assets/images/watermark.png')}
+          style={styles.watermark}
+          contentFit="contain"
+          pointerEvents="none"
+          accessibilityElementsHidden
         />
 
         <View style={styles.hero}>
@@ -70,13 +71,9 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   watermark: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: '6%',
     width: '100%',
-    height: '30%',
-    opacity: 0.16,
+    height: 90,
+    opacity: 0.2,
   },
   safeArea: {
     flex: 1,
