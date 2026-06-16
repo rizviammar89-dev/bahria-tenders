@@ -7,6 +7,7 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
 import { Brand } from '@/constants/theme';
+import { supabase } from '@/lib/supabase';
 
 export type PushResult =
   | { ok: true; token: string }
@@ -57,4 +58,23 @@ export async function registerForPushAsync(): Promise<PushResult> {
   } catch (e) {
     return { ok: false, reason: `getExpoPushTokenAsync failed: ${String(e)}` };
   }
+}
+
+/**
+ * Story 2.5: register for push and persist the token so the broadcast dispatcher can reach this
+ * device. Non-fatal — never throws, never blocks the app (residents store one too; harmless).
+ */
+export async function savePushToken(): Promise<void> {
+  const result = await registerForPushAsync();
+  if (!result.ok) return; // e.g. emulator / permission denied — silently skip
+  const { data: userData } = await supabase.auth.getUser();
+  const uid = userData.user?.id;
+  if (!uid) return;
+  const { error } = await supabase
+    .from('push_tokens')
+    .upsert(
+      { user_id: uid, expo_push_token: result.token, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id' },
+    );
+  if (error) console.warn('savePushToken upsert failed:', error.message);
 }

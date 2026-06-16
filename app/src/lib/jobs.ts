@@ -34,13 +34,28 @@ export async function createJob(input: {
   const uid = userData.user?.id;
   if (!uid) return { error: 'You are not signed in.' };
 
-  const { error } = await supabase.from('jobs').insert({
-    resident_id: uid,
-    service_id: input.serviceId,
-    description: input.description.trim(),
-    precinct: input.precinct.trim(),
-  });
-  return { error: error ? error.message : null };
+  const { data, error } = await supabase
+    .from('jobs')
+    .insert({
+      resident_id: uid,
+      service_id: input.serviceId,
+      description: input.description.trim(),
+      precinct: input.precinct.trim(),
+    })
+    .select('id')
+    .single();
+  if (error) return { error: error.message };
+
+  // Story 2.5: broadcast to matching providers — FIRE-AND-FORGET. Must NOT block or fail the
+  // resident's post; a broadcast error is logged only. notification_log + retry live server-side.
+  void supabase.functions
+    .invoke('broadcast-job', { body: { jobId: data.id } })
+    .then(({ error: bErr }) => {
+      if (bErr) console.warn('broadcast-job invoke failed:', bErr.message);
+    })
+    .catch((e) => console.warn('broadcast-job invoke error:', String(e)));
+
+  return { error: null };
 }
 
 export type OpenJob = {
