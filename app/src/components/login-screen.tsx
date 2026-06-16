@@ -97,7 +97,7 @@ export function LoginScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1, padding: Spacing.four, gap: Spacing.three, justifyContent: 'center' },
-  logo: { width: '100%', height: 140, marginBottom: Spacing.two },
+  logo: { width: '100%', height: 190, marginBottom: Spacing.two },
   tagline: { textAlign: 'center' },
   input: {
     borderWidth: 1,
