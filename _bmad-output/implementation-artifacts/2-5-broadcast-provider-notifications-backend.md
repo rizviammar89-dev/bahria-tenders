@@ -76,6 +76,19 @@ so that providers respond quickly without watching the app, and every send is lo
 - [Source: supabase/migrations/20260613061242_core_schema.sql] — `notification_log` columns (recipient_id, job_id, channel, idempotency_key UNIQUE, sent_at) + `notification_channel` enum; `profiles.service_ids`/`precinct`/`verified_by_admin`.
 - [Source: _bmad-output/implementation-artifacts/2-1-post-a-job.md] — `createJob` is the trigger point for the fire-and-forget invoke.
 
+### Review Findings (code review 2026-06-16)
+
+Full 3-layer adversarial panel ran independently. All 7 ACs confirmed satisfied (Auditor: no claimed-but-not-done; matcher exhaustively pgTAP-proven; RLS confirms residents cannot read providers' tokens; fire-and-forget confirmed non-blocking).
+
+- [x] [Review][Patch] **HIGH — false-delivery on malformed Expo response.** `PushChannel.send` marked ALL rows sent when Expo returned an empty/missing `data` array (`statuses.length === 0` fallback). FIXED: require a well-formed array of matching length, else confirm nothing (rows stay unsent → retried). Also closes the index-misalignment / sparse-array / short-response concerns in one guard. [supabase/functions/broadcast-job/index.ts]
+- [x] [Review][Patch] Cosmetic — header referenced a non-existent `pickChannel()`; reworded to match the actual dispatch. [supabase/functions/broadcast-job/index.ts]
+- [x] [Review][Defer] **Cross-user token collision** — `push_tokens` PK is `user_id` with no UNIQUE on `expo_push_token`; two accounts on one device → the same token under two user_ids, so a logged-out user's row can still receive pushes. Low-likelihood in the POC (founder-provisioned, ~one device per provider, rare account-switching). Recommended fix post-POC: UNIQUE(expo_push_token) + a server-side "claim token for current user" on register (needs an RPC/delete path). — deferred, documented
+- [x] [Review][Defer] `notification_log` mark-sent `.update()` isn't error-checked — if it fails after a successful Expo send, rows stay unsent and a later broadcast re-sends (duplicate push, not data loss; idempotent log). Add error handling/receipt-reconcile post-POC. — deferred
+- [x] [Review][Defer] No Expo receipt polling — a `status:'ok'` ticket ≠ delivery; dead/stale tokens aren't pruned. Acceptable for the POC log; revisit with the N=20 delivery instrumentation. — deferred
+- [x] [Review][Defer] No >100-message chunking (Expo's per-request cap) — irrelevant at POC scale (~20 providers); chunk when provider count grows. — deferred
+
+**Dismissed (intended / benign):** residents & unverified providers store tokens (harmless — the matcher targets only verified providers; documented); `savePushToken` re-runs per sign-in churning `updated_at` (benign, captures rotated tokens); job-deleted-between-rpc-and-fetch fallback to "home/your area" (benign degraded copy, vanishingly rare).
+
 ## Dev Agent Record
 
 ### Agent Model Used

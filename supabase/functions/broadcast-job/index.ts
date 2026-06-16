@@ -7,7 +7,8 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 type Target = { notification_id: string; recipient_id: string; expo_push_token: string };
 type Message = { notificationId: string; to: string; title: string; body: string };
 
-// --- Channel abstraction: adding SMS post-POC = one new class + one line in pickChannel(). ---
+// --- Channel abstraction: adding SMS post-POC = one new class implementing Channel + swapping
+// which Channel(s) the dispatch loop uses below. The matcher + notification_log are channel-agnostic. ---
 interface Channel {
   // Returns the notificationIds that were accepted for delivery.
   send(messages: Message[]): Promise<string[]>;
@@ -30,11 +31,15 @@ class PushChannel implements Channel {
       ),
     });
     if (!res.ok) return [];
-    // Expo returns { data: [{status}, ...] } in request order; mark the ok ones sent.
+    // Expo returns { data: [{status}, ...] } in request order. Only mark a row sent on a
+    // confirmed per-message status 'ok'. If the body is missing/malformed or the length doesn't
+    // line up (partial/short response), confirm NOTHING — the rows stay unsent and a later
+    // broadcast retries them (never a silent false-delivery).
     const json = await res.json().catch(() => null);
-    const statuses: { status?: string }[] = json?.data ?? [];
+    const statuses = json?.data;
+    if (!Array.isArray(statuses) || statuses.length !== messages.length) return [];
     return messages
-      .filter((_, i) => statuses[i]?.status === 'ok' || statuses.length === 0)
+      .filter((_, i) => (statuses[i] as { status?: string })?.status === 'ok')
       .map((m) => m.notificationId);
   }
 }
