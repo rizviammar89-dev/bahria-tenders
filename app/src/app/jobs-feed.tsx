@@ -1,15 +1,19 @@
 // Story 2.3: Provider Job Discovery (FR-7). A verified provider sees open jobs in their
 // trades. RLS jobs_select_visible is the security backstop; the query filters to relevance.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, StyleSheet } from 'react-native';
+import { AppState, FlatList, Pressable, RefreshControl, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BidModal } from '@/components/bid-modal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Brand, Spacing } from '@/constants/theme';
+import { publishLocation, setAvailability, shouldPublish } from '@/lib/availability';
 import { fetchOpenJobsForMyTrades, type OpenJob } from '@/lib/jobs';
+import { getCurrentPosition, requestForegroundPermission } from '@/lib/location';
 import { timeAgo } from '@/lib/time-ago';
+
+const PUBLISH_THROTTLE_MS = 20_000; // Story 6.2: bound battery — publish at most every ~20s
 
 export default function JobsFeedScreen() {
   const [jobs, setJobs] = useState<OpenJob[]>([]);
@@ -19,6 +23,9 @@ export default function JobsFeedScreen() {
   const [now, setNow] = useState(0); // stamped at load time (Date.now() is impure → keep it out of render)
   const [bidJob, setBidJob] = useState<OpenJob | null>(null); // open the bid modal for this job
   const [confirmation, setConfirmation] = useState<string | null>(null);
+  const [available, setAvailable] = useState(false); // Story 6.2: provider availability
+  const [availMsg, setAvailMsg] = useState<string | null>(null);
+  const lastPublishRef = useRef<number | null>(null);
   const mounted = useRef(true);
 
   // Single fetch path, used by both the initial load and pull-to-refresh.
@@ -41,6 +48,55 @@ export default function JobsFeedScreen() {
     };
   }, [load]);
 
+  // Story 6.2: toggle availability. Turning ON first asks for location permission (consent).
+  async function onToggleAvailable() {
+    const next = !available;
+    setAvailMsg(null);
+    if (next) {
+      const granted = await requestForegroundPermission();
+      if (!mounted.current) return;
+      if (!granted) {
+        setAvailMsg('Location permission is needed to go Available — enable it to share your position.');
+        return;
+      }
+    }
+    const { error } = await setAvailability(next);
+    if (!mounted.current) return;
+    if (error) {
+      console.warn('setAvailability failed:', error);
+      setAvailMsg("Couldn't update availability — please try again.");
+      return;
+    }
+    setAvailable(next);
+    setAvailMsg(
+      next
+        ? 'You are Available — residents can see you on the map while this screen is open.'
+        : 'You are Unavailable — your location is no longer shared.',
+    );
+  }
+
+  // Story 6.2: while Available + foregrounded, publish throttled location. Guarded getCurrentPosition
+  // returns null on a build without expo-location (pre-6.3) → inert, no crash. Stops on Unavailable/unmount.
+  useEffect(() => {
+    if (!available) return;
+    let cancelled = false;
+    const tick = async () => {
+      if (cancelled || AppState.currentState !== 'active') return;
+      const ts = Date.now();
+      if (!shouldPublish(lastPublishRef.current, ts, PUBLISH_THROTTLE_MS)) return;
+      const pos = await getCurrentPosition();
+      if (cancelled || !pos) return;
+      lastPublishRef.current = ts;
+      await publishLocation(pos.lat, pos.lng);
+    };
+    tick();
+    const id = setInterval(tick, PUBLISH_THROTTLE_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [available]);
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
@@ -61,6 +117,22 @@ export default function JobsFeedScreen() {
           ListHeaderComponent={
             <ThemedView style={styles.header}>
               <ThemedText type="subtitle">Open Jobs</ThemedText>
+              <Pressable
+                onPress={onToggleAvailable}
+                style={({ pressed }) => [
+                  styles.availToggle,
+                  { backgroundColor: available ? Brand.primary : Brand.sand },
+                  pressed && styles.pressed,
+                ]}>
+                <ThemedText type="smallBold" style={{ color: available ? '#ffffff' : Brand.ink }}>
+                  {available ? '● Available' : '○ Unavailable — tap to go online'}
+                </ThemedText>
+              </Pressable>
+              {availMsg && (
+                <ThemedText type="small" themeColor="textSecondary">
+                  {availMsg}
+                </ThemedText>
+              )}
               {confirmation && (
                 <ThemedView type="backgroundElement" style={styles.confirm}>
                   <ThemedText type="smallBold">{confirmation}</ThemedText>
@@ -126,6 +198,14 @@ const styles = StyleSheet.create({
   list: { padding: Spacing.four, gap: Spacing.three },
   header: { gap: Spacing.two, marginBottom: Spacing.one },
   confirm: { padding: Spacing.three, borderRadius: Spacing.three },
+  availToggle: {
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Spacing.three,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   card: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.two, minHeight: 64 },
   empty: { padding: Spacing.four, borderRadius: Spacing.three, gap: Spacing.one },
   error: { color: '#c0392b' },

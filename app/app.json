@@ -29,6 +29,12 @@
       "expo-router",
       "expo-notifications",
       [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Bahria Tenders shares your location with residents only while you are Available, so they can see you on the map and get accurate distances. It stops when you go Unavailable."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#1F2E24",
