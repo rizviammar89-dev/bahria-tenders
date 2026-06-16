@@ -18,22 +18,23 @@ export default function HomeScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <Image
-          source={require('@/assets/images/logo-horizontal.png')}
-          style={styles.logo}
-          contentFit="contain"
-          accessibilityLabel="Bahria Tenders"
-        />
-
-        {/* Brand watermark: Bahria Town skyline, below the logo + above the hero text. */}
-        <Image
-          source={require('@/assets/images/watermark.png')}
-          style={styles.watermark}
-          contentFit="cover"
-          tintColor={Brand.primary}
-          pointerEvents="none"
-          accessibilityElementsHidden
-        />
+        {/* Logo sits directly above the skyline watermark as one brand block. */}
+        <View style={styles.brand}>
+          <Image
+            source={require('@/assets/images/logo-horizontal.png')}
+            style={styles.logo}
+            contentFit="contain"
+            accessibilityLabel="Bahria Tenders"
+          />
+          <Image
+            source={require('@/assets/images/watermark.png')}
+            style={styles.watermark}
+            contentFit="cover"
+            tintColor={Brand.primary}
+            pointerEvents="none"
+            accessibilityElementsHidden
+          />
+        </View>
 
         <View style={styles.hero}>
           <ThemedText type="title" style={styles.heroTitle}>
@@ -84,7 +85,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: Spacing.four,
   },
-  logo: { width: '100%', height: 230, marginBottom: Spacing.two },
+  brand: { width: '100%', alignItems: 'center' },
+  logo: { width: '100%', height: 230 },
   hero: { alignItems: 'center', gap: Spacing.one },
   heroTitle: { fontSize: 34, lineHeight: 40, textAlign: 'center' },
   heroAccent: { color: Brand.accent },
