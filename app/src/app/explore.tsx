@@ -15,6 +15,7 @@ export default function PushSpikeScreen() {
   const [token, setToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showMap, setShowMap] = useState(false); // Story 6.3 smoke: opt-in so the tab never crashes on open
 
   async function onRegister() {
     setBusy(true);
@@ -72,10 +73,17 @@ export default function PushSpikeScreen() {
             </ThemedText>
           )}
 
-          {/* Story 6.3 smoke: confirms react-native-maps renders on the new build. Throwaway —
-              6.4 builds the real resident map. Renders blank/errors on the pre-maps build. */}
+          {/* Story 6.3 smoke: opt-in (button) so opening this tab never crashes — react-native-maps
+              with a bad/missing key can hard-crash. Tap to mount; 6.4 builds the real resident map. */}
           <ThemedText type="smallBold">Maps smoke (6.3)</ThemedText>
-          <AppMap />
+          <Pressable
+            onPress={() => setShowMap((v) => !v)}
+            style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
+            <ThemedText type="default" style={styles.buttonLabel}>
+              {showMap ? 'Hide test map' : 'Show test map'}
+            </ThemedText>
+          </Pressable>
+          {showMap && <AppMap />}
         </ScrollView>
       </SafeAreaView>
     </ThemedView>
