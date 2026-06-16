@@ -9,10 +9,11 @@ import { Platform } from 'react-native';
 
 export const Colors = {
   light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
+    // Brand look (mockup): cream canvas, white cards, sand selection, dark-green ink.
+    text: '#1F2E24',
+    background: '#F5F2EA',
+    backgroundElement: '#FFFFFF',
+    backgroundSelected: '#E7D8B5',
     textSecondary: '#60646C',
   },
   dark: {

@@ -1,114 +1,90 @@
-import * as Device from 'expo-device';
-import { Platform, Pressable, StyleSheet } from 'react-native';
+// Home tab: branded landing (brand mockup). Logo + hero + a role-aware Get Started CTA.
+import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
+import { Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { Brand, BottomTabInset, Spacing } from '@/constants/theme';
+import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
-
 export default function HomeScreen() {
+  const router = useRouter();
+  const { role } = useAuth();
+  const isResident = role === 'resident';
+
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
+        <Image
+          source={require('@/assets/images/logo-horizontal.png')}
+          style={styles.logo}
+          contentFit="contain"
+          accessibilityLabel="Bahria Tenders"
+        />
+
+        <ThemedView style={styles.hero}>
+          <ThemedText type="title" style={styles.heroTitle}>
+            Reliable Services
+          </ThemedText>
+          <ThemedText type="title" style={[styles.heroTitle, styles.heroAccent]}>
+            for Your Home
+          </ThemedText>
+          <ThemedText type="default" themeColor="textSecondary" style={styles.heroSub}>
+            {isResident
+              ? 'Post a job and trusted providers in your precinct will send you a price.'
+              : 'See jobs near you and send your price — get hired on your work, not the lowest bid.'}
           </ThemedText>
         </ThemedView>
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
+        <Pressable
+          onPress={() => router.navigate(isResident ? '/post-job' : '/jobs-feed')}
+          style={({ pressed }) => [styles.cta, pressed && styles.pressed]}>
+          <ThemedText type="default" style={styles.ctaLabel}>
+            {isResident ? 'Post a Job' : 'Find Jobs'}
+          </ThemedText>
+        </Pressable>
 
         <Pressable
           onPress={() => supabase.auth.signOut()}
-          style={({ pressed }) => [styles.signOut, pressed && styles.signOutPressed]}>
+          style={({ pressed }) => [styles.signOut, pressed && styles.pressed]}>
           <ThemedText type="small" themeColor="textSecondary">
             Sign out
           </ThemedText>
         </Pressable>
-
-        {Platform.OS === 'web' && <WebBadge />}
       </SafeAreaView>
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
+  container: { flex: 1 },
   safeArea: {
     flex: 1,
     paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
     paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
     alignItems: 'center',
     justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
     gap: Spacing.four,
   },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
+  logo: { width: '90%', height: 110, marginBottom: Spacing.two },
+  hero: { alignItems: 'center', gap: Spacing.one },
+  heroTitle: { fontSize: 34, lineHeight: 40, textAlign: 'center' },
+  heroAccent: { color: Brand.accent },
+  heroSub: { textAlign: 'center', marginTop: Spacing.three, paddingHorizontal: Spacing.two },
+  cta: {
+    backgroundColor: Brand.primary,
+    paddingVertical: Spacing.three,
+    paddingHorizontal: Spacing.six,
     borderRadius: Spacing.four,
+    minHeight: 52,
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'stretch',
   },
-  signOut: {
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.four,
-  },
-  signOutPressed: {
-    opacity: 0.6,
-  },
+  ctaLabel: { color: '#ffffff', fontSize: 18 },
+  signOut: { paddingVertical: Spacing.two, paddingHorizontal: Spacing.four },
+  pressed: { opacity: 0.7 },
 });
