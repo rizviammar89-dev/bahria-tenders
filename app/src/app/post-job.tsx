@@ -1,16 +1,30 @@
 // Story 2.1: Post a Job (FR-6). Resident picks a trade, describes the problem, confirms
 // precinct, and posts. Insert goes through the authed client under RLS jobs_insert_own.
-import { useEffect, useState } from 'react';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { useEffect, useState, type ComponentProps } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Brand, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { validateJobDraft } from '@/lib/job-draft';
 import { createJob, fetchMyPrecinct, fetchServices, type Service } from '@/lib/jobs';
 
+// Map each trade slug to a Material Community icon for the tile grid.
+type IconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
+const TRADE_ICON: Record<string, IconName> = {
+  ac_technician: 'air-conditioner',
+  plumber: 'pipe-wrench',
+  carpenter: 'hammer',
+  electrician: 'flash',
+  mason: 'wall',
+  painter: 'format-paint',
+};
+
 export default function PostJobScreen() {
+  const theme = useTheme();
   const [services, setServices] = useState<Service[]>([]);
   const [serviceId, setServiceId] = useState('');
   const [description, setDescription] = useState('');
@@ -87,7 +101,7 @@ export default function PostJobScreen() {
               {loadError}
             </ThemedText>
           )}
-          <ThemedView style={styles.chips}>
+          <ThemedView style={styles.grid}>
             {services.map((s) => {
               const selected = s.id === serviceId;
               return (
@@ -95,12 +109,26 @@ export default function PostJobScreen() {
                   key={s.id}
                   onPress={() => setServiceId(s.id)}
                   style={({ pressed }) => [
-                    styles.chip,
-                    selected && styles.chipSelected,
+                    styles.tile,
+                    {
+                      backgroundColor: selected ? Brand.primary : theme.backgroundElement,
+                      borderColor: selected ? Brand.primary : theme.backgroundSelected,
+                    },
                     pressed && styles.pressed,
                   ]}>
-                  <ThemedText type="small" style={selected ? styles.chipLabelSelected : undefined}>
-                    {s.display_en} · {s.display_ur}
+                  <MaterialCommunityIcons
+                    name={TRADE_ICON[s.slug] ?? 'toolbox-outline'}
+                    size={30}
+                    color={selected ? '#ffffff' : Brand.accent}
+                  />
+                  <ThemedText type="smallBold" style={selected ? styles.tileLabelSelected : undefined}>
+                    {s.display_en}
+                  </ThemedText>
+                  <ThemedText
+                    type="small"
+                    themeColor={selected ? undefined : 'textSecondary'}
+                    style={selected ? styles.tileLabelSelected : undefined}>
+                    {s.display_ur}
                   </ThemedText>
                 </Pressable>
               );
@@ -149,18 +177,19 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   scroll: { padding: Spacing.four, gap: Spacing.three },
   notice: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.one },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
-  chip: {
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Spacing.five,
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
+  tile: {
+    width: '48%',
+    borderRadius: Spacing.three,
     borderWidth: 1,
-    borderColor: '#888',
-    minHeight: 48,
+    paddingVertical: Spacing.three,
+    paddingHorizontal: Spacing.two,
+    minHeight: 104,
+    alignItems: 'center',
     justifyContent: 'center',
+    gap: Spacing.one,
   },
-  chipSelected: { backgroundColor: Brand.primary, borderColor: Brand.primary },
-  chipLabelSelected: { color: '#ffffff' },
+  tileLabelSelected: { color: '#ffffff' },
   input: {
     borderWidth: 1,
     borderColor: '#888',
