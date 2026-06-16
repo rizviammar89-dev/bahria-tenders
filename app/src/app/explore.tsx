@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppMap } from '@/components/app-map';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Brand, Spacing } from '@/constants/theme';
@@ -70,6 +71,11 @@ export default function PushSpikeScreen() {
               Note: this gate targets budget Android. Run it on the Android dev build.
             </ThemedText>
           )}
+
+          {/* Story 6.3 smoke: confirms react-native-maps renders on the new build. Throwaway —
+              6.4 builds the real resident map. Renders blank/errors on the pre-maps build. */}
+          <ThemedText type="smallBold">Maps smoke (6.3)</ThemedText>
+          <AppMap />
         </ScrollView>
       </SafeAreaView>
     </ThemedView>
