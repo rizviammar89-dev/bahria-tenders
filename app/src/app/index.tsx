@@ -17,6 +17,14 @@ export default function HomeScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      {/* Brand watermark: the logo mark, large + faint, behind the content (mockup look). */}
+      <Image
+        source={require('@/assets/images/splash-icon.png')}
+        style={styles.watermark}
+        contentFit="contain"
+        pointerEvents="none"
+        accessibilityElementsHidden
+      />
       <SafeAreaView style={styles.safeArea}>
         <Image
           source={require('@/assets/images/logo-horizontal.png')}
@@ -61,6 +69,14 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  watermark: {
+    position: 'absolute',
+    top: '18%',
+    left: '10%',
+    width: '80%',
+    height: '60%',
+    opacity: 0.06,
+  },
   safeArea: {
     flex: 1,
     paddingHorizontal: Spacing.four,
