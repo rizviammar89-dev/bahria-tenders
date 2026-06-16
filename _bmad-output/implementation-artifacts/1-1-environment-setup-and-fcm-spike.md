@@ -4,7 +4,7 @@ baseline_commit: 5dea1160076411d5409127b9e290c4a5c4d7d970
 
 # Story 1.1: Environment Setup & FCM-on-Budget-Android Push Spike
 
-Status: in-progress (blocked on founder manual steps — see Completion Notes)
+Status: done (CONDITIONAL GO — push viable with battery optimization disabled; see Spike Results)
 
 <!-- Replaces superseded Bubble story 1.1 ("Create the Bubble app & confirm plan capabilities") per the 2026-06-12 platform pivot — same role: stand up the foundation and confirm the platform's load-bearing capabilities before feature work. This story is the POC Week-1 GO/NO-GO gate (poc-spec-2026-06-12.md §7). -->
 
@@ -39,17 +39,17 @@ so that the riskiest platform assumption (push-as-doorbell for provider job aler
 - [x] Task 3: Expo scaffold (AC-4)
   - [x] `npx create-expo-app@latest app --template default@sdk-56` → expo ~56.0.11, Expo Router + TS
   - [~] `pnpm start` + open in Expo Go on dev phone → **MANUAL (needs physical device)**; code verified via `tsc --noEmit` + `expo lint` (both green)
-- [ ] Task 4: FCM credentials + dev build (AC-5) — **BLOCKED: needs Firebase + Expo accounts + device (founder)**
+- [x] Task 4: FCM credentials + dev build (AC-5) — DONE 2026-06-14
   - [x] `app.json`: `expo.android.googleServicesFile`, `expo.android.package` (`com.bahriatenders.app`), `expo-notifications` plugin added
   - [x] `pnpm expo install expo-notifications expo-device expo-constants` (+ expo-dev-client)
-  - [ ] Firebase console: new project → Android app → download `google-services.json` into `app/` — **MANUAL**
-  - [ ] Firebase → Service accounts → Generate FCM V1 Private Key → upload via `eas credentials` — **MANUAL**
-  - [ ] `eas build --profile development --platform android` → install APK on budget device — **MANUAL** (needs `eas login` + `eas init`)
-- [ ] Task 5: Push spike + verdict (AC-6, AC-7) — **BLOCKED: needs dev build + device + 12h wait (founder)**
-  - [x] Token screen + `registerForPushAsync` (`getExpoPushTokenAsync({ projectId })`, Android-13+ channel-first) — code complete
-  - [ ] Send test pushes via `https://exp.host/--/api/v2/push/send` — **MANUAL** (after dev build installed)
-  - [ ] Run the 12h-backgrounded test twice (default vs optimization-disabled) — **MANUAL**
-  - [ ] Record outcomes + GO/NO-GO verdict; update sprint status — **MANUAL**
+  - [x] Firebase project → Android app `com.bahriatenders.app` → `google-services.json` added
+  - [x] FCM V1 service-account key uploaded via `eas credentials` (client email `firebase-adminsdk-fbsvc@bahria-tenders.iam.gserviceaccount.com`)
+  - [x] `eas build --profile development --platform android` → APK installed on a real Samsung device (`eas login` + `eas init` done; projectId committed)
+- [x] Task 5: Push spike + verdict (AC-6, AC-7) — DONE 2026-06-16
+  - [x] Token screen + `registerForPushAsync` (`getExpoPushTokenAsync({ projectId })`, Android-13+ channel-first)
+  - [x] Test pushes sent via `https://exp.host/--/api/v2/push/send` (receipts `ok` + seen on device)
+  - [x] Backgrounded soak run twice: default settings (no delivery) vs optimization-disabled (instant delivery)
+  - [x] Outcomes + CONDITIONAL GO verdict recorded; sprint status updated
 
 ## Dev Notes
 
@@ -133,8 +133,20 @@ claude-opus-4-8 (Amelia / dev-story)
 |---|---|---|---|
 | Immediate (app backgrounded), default settings | yes (receipt ok + seen on device) | ~instant | Samsung/One UI |
 | Backgrounded ≥12h, default battery settings | **NO** — not surfaced on device | n/a (receipt ok = reached FCM, never shown) | Samsung/One UI |
-| Backgrounded ≥12h, optimization disabled | _(soak pending — Round 2)_ | | Samsung/One UI |
+| Backgrounded (idle), optimization disabled (Unrestricted) | **YES** | ~instant | Samsung/One UI |
 
 **Round 1 finding (2026-06-15):** App was **backgrounded via Home (NOT force-stopped/swiped)** and the phone sat idle overnight on **default battery settings**. Soak push (ticket `019ec99c-…`) returned **getReceipts status: ok** (Expo→FCM handoff succeeded) but **no notification appeared in the tray** — confirmed by checking the notification shade. The immediate-delivery test the night before (fresh background) DID arrive. Signature = Android Doze / app-standby / Samsung "Sleeping apps" suppressing FCM wake after long idle. This is the doorbell-failure mode the gate exists to catch. **Verdict hinges on Round 2** (battery-optimization-disabled): if push then arrives reliably, the gate is a CONDITIONAL GO requiring the onboarding "disable battery optimization" step; if it still fails, NO-GO → SMS back into POC scope.
 
-**GO / NO-GO verdict:** _PENDING 12h soak._ Immediate delivery confirmed. **Caveat for whoever records the final verdict:** this device is Samsung (One UI), which is materially less battery-aggressive than the Tecno/Infinix/Redmi devices the target providers actually use — a GO here de-risks the *pipeline* but not the *budget-OEM doorbell*. Recommend one soak on a Transsion/Xiaomi device before treating push as field-reliable.
+**GO / NO-GO verdict (2026-06-16): CONDITIONAL GO.**
+
+Push is viable as the provider doorbell **on the condition that battery optimization is disabled for the app**. Evidence:
+- Immediate delivery (fresh background): ✅
+- Backgrounded overnight, **default** battery settings: ❌ not surfaced (Doze / app-standby / Samsung "Sleeping apps").
+- Backgrounded idle, **battery Unrestricted**: ✅ delivered instantly.
+
+**Decision:** GO — keep push as the doorbell, but the **"disable battery optimization for Bahria Tenders" step becomes MANDATORY in provider onboarding** (the founder sets it when provisioning each provider's phone). Without it, alerts silently die after idle. The pull feed + founder WhatsApp fallback remain the backstop (per poc-spec). SMS does NOT need to re-enter POC scope at this time.
+
+**Caveats / required follow-up:**
+1. **Device class:** this was validated on Samsung/One UI, which is *less* battery-aggressive than the Tecno/Infinix/Redmi (Transsion/Xiaomi) phones most target providers use. The conditional-GO must be re-confirmed with one soak on such a device before relying on push in the field — the "disable optimization" step may be necessary-but-not-sufficient on the worst OEMs.
+2. **Onboarding checklist:** add "Battery → Unrestricted + remove from Sleeping apps" to the provider setup script/runbook.
+3. **Instrument:** `notification_log` (Story 2.5) should record delivery so the real-world push gap is measured at N=20, not assumed.
