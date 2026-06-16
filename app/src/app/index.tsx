@@ -73,10 +73,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    bottom: '8%',
+    bottom: 0,
     width: '100%',
-    height: '45%',
-    opacity: 0.14,
+    height: '32%',
+    opacity: 0.16,
   },
   safeArea: {
     flex: 1,
