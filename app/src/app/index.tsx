@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
   },
   brand: { width: '100%', alignItems: 'center', marginTop: 80 },
   logo: { width: '100%', height: 210 },
-  hero: { alignItems: 'center', gap: Spacing.one, marginTop: -28 },
+  hero: { alignItems: 'center', gap: Spacing.one, marginTop: -12 },
   heroTitle: { fontSize: 26, lineHeight: 32, textAlign: 'center' },
   heroAccent: { color: Brand.accent },
   heroSub: { textAlign: 'center', marginTop: Spacing.three, paddingHorizontal: Spacing.two },
