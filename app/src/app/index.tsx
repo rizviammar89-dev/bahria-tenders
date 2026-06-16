@@ -74,9 +74,10 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   watermark: {
     width: '100%',
-    height: 240,
+    height: 180,
     opacity: 0.5,
     marginTop: -40,
+    transform: [{ scale: 1.5 }],
   },
   safeArea: {
     flex: 1,
