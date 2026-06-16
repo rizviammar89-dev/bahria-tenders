@@ -29,6 +29,10 @@ export async function createJob(input: {
   serviceId: string;
   description: string;
   precinct: string;
+  // Story 6.1: optional resident coordinates for the distance/visiting-charge rule. Omitted
+  // today (no GPS capture UI until the maps native build); stored as null when absent.
+  lat?: number;
+  lng?: number;
 }): Promise<{ error: string | null }> {
   const { data: userData } = await supabase.auth.getUser();
   const uid = userData.user?.id;
@@ -41,6 +45,8 @@ export async function createJob(input: {
       service_id: input.serviceId,
       description: input.description.trim(),
       precinct: input.precinct.trim(),
+      lat: input.lat ?? null,
+      lng: input.lng ?? null,
     })
     .select('id')
     .single();
@@ -56,6 +62,23 @@ export async function createJob(input: {
     .catch((e) => console.warn('broadcast-job invoke error:', String(e)));
 
   return { error: null };
+}
+
+/**
+ * Story 6.1: distance + Rs 250 visiting charge for a (job, provider) pair, via the DB rule.
+ * Returns distanceKm null + chargePkr 0 when either location is unknown.
+ */
+export async function fetchVisitingCharge(
+  jobId: string,
+  providerId: string,
+): Promise<{ distanceKm: number | null; chargePkr: number; error: string | null }> {
+  const { data, error } = await supabase.rpc('visiting_charge', {
+    p_job_id: jobId,
+    p_provider_id: providerId,
+  });
+  if (error) return { distanceKm: null, chargePkr: 0, error: error.message };
+  const row = (data as { distance_km: number | null; charge_pkr: number }[])?.[0];
+  return { distanceKm: row?.distance_km ?? null, chargePkr: row?.charge_pkr ?? 0, error: null };
 }
 
 export type OpenJob = {
