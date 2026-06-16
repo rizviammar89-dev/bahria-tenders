@@ -4,7 +4,7 @@ baseline_commit: a22b10b82a73ac2c03ecf071ff305e67c74536c7
 
 # Story 6.2: Provider Availability + Location Publishing (FR-28, reactivates FR-19)
 
-Status: review
+Status: done
 
 <!-- Epic 6 / live-location maps. Providers mark themselves Available and, while Available + foregrounded, publish throttled location updates into provider_locations (6.1's table) so residents see them live (6.4) and the visiting-charge distance (6.1) is real. Reactivates the POC-deferred FR-19 (availability/online) with AUTO-EXPIRY so a stale toggle degrades gracefully. NATIVE MODULE: needs `expo-location` → does NOT run on the current dev build until a new EAS build. To avoid burning two builds, the native build is BATCHED with Story 6.3 (react-native-maps); 6.2's expo-location calls are GUARDED (try/catch, non-fatal) so the current app keeps working until that build, and on-device verification is deferred to the shared 6.3 build. Everything that doesn't need the native module (schema, RLS, freshness rule, data layer, toggle UI, pure throttle/expiry logic) is built + tested now. -->
 
@@ -107,7 +107,8 @@ claude-opus-4-8 (Amelia / dev-story)
 - **Privacy/consent:** foreground-only (no background tracking in the POC), explicit consent copy before the OS prompt, publishing stops on Unavailable/background/unmount; throttled ~20s to bound battery.
 - **RLS:** availability rides the existing `profiles_update_own`; only the column grant was widened. pgTAP proves a provider sets only their own availability and that reputation columns stay non-client-writable (no 1.3 regression).
 - **⚠️ NATIVE BUILD REQUIRED — on-device verification deferred + BATCHED with 6.3.** `expo-location` won't function in the current dev client. The `location.ts` guards (try/catch → null) keep the current app working — the toggle writes to the DB, but the publisher can't get coordinates until the new EAS build (done with 6.3's `react-native-maps`). After that build: smoke the permission prompt, live publishing into `provider_locations`, and auto-expiry.
-- **Code review:** pending.
+- **Code review:** done (3-layer; 1 patch — hydrate toggle from DB).
+- **✅ Device E2E smoke CONFIRMED 2026-06-16** (on the react-native-maps + expo-location build): provider logged in → Jobs tab → tapped Available → OS location prompt allowed → after enabling device GPS, real coordinates published to `provider_locations` (lat 25.1185, lng 67.3654) and `provider_is_available()` returned true (fresh). Two issues found + fixed during the smoke: (a) device Location/GPS was off (user-side); (b) **a real grant bug** — the client `.upsert()` into `push_tokens`/`provider_locations` hit "permission denied" because PostgREST's ON CONFLICT DO UPDATE sets the PK column too, which the column-scoped UPDATE grant omitted → fixed in migration `20260616180000_fix_upsert_grants.sql` (full UPDATE grant; RLS own-row WITH CHECK keeps it safe). This bug also affected Story 2.5's `savePushToken`.
 
 ### File List
 
