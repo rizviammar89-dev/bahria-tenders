@@ -8,8 +8,7 @@ import {
 import * as Notifications from 'expo-notifications';
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
 import { useEffect } from 'react';
-
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import AppTabs from '@/components/app-tabs';

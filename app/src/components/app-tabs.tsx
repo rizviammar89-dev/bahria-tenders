@@ -1,12 +1,13 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
+import { useColorScheme } from 'react-native';
 
 import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/lib/auth';
 import { roleTabs } from '@/lib/role-tabs';
 
 export default function AppTabs() {
-  const colors = Colors[useColorScheme()]; // brand: always light
+  const scheme = useColorScheme();
+  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
   // Role is resolved before this mounts (AuthProvider gates `loading`), so the tab set is
   // correct at first mount — no remount/flash. Conditional render, not the `hidden` prop
   // (which is not respected on Android — expo/expo#41781).
