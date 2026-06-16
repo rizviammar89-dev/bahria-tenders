@@ -63,6 +63,15 @@ export const Fonts = Platform.select({
   },
 });
 
+// Story (brand): Montserrat is the brand body typeface. These names match the loaded
+// @expo-google-fonts/montserrat variants; custom fonts need an explicit family per weight.
+export const MontserratFont = {
+  regular: 'Montserrat_400Regular',
+  medium: 'Montserrat_500Medium',
+  semibold: 'Montserrat_600SemiBold',
+  bold: 'Montserrat_700Bold',
+} as const;
+
 export const Spacing = {
   half: 2,
   one: 4,
