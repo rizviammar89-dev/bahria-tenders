@@ -1,5 +1,6 @@
 // Story 1.4: phone + PIN login. Normalizes the phone, derives the synthetic auth email,
 // and signs in. No self-signup, no OTP (POC: the founder provisions accounts).
+import { Image } from 'expo-image';
 import { useState } from 'react';
 import { Pressable, StyleSheet, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -44,10 +45,13 @@ export function LoginScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <ThemedText type="title" style={styles.title}>
-          Bahria Tenders
-        </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
+        <Image
+          source={require('@/assets/images/logo-horizontal.png')}
+          style={styles.logo}
+          contentFit="contain"
+          accessibilityLabel="Bahria Tenders"
+        />
+        <ThemedText type="small" themeColor="textSecondary" style={styles.tagline}>
           Log in with your phone number and PIN.
         </ThemedText>
 
@@ -93,7 +97,8 @@ export function LoginScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1, padding: Spacing.four, gap: Spacing.three, justifyContent: 'center' },
-  title: { textAlign: 'center' },
+  logo: { width: '100%', height: 96, marginBottom: Spacing.two },
+  tagline: { textAlign: 'center' },
   input: {
     borderWidth: 1,
     borderColor: '#888',
