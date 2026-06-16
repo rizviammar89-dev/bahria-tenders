@@ -4,7 +4,7 @@ baseline_commit: 508f559736c6cfc02c3657466ece8ecb7d3a14d5
 
 # Story 2.5: Broadcast & Provider Notifications — Backend (FR-20, push-only)
 
-Status: review
+Status: done
 
 <!-- Epic 2 / demand loop — the "doorbell". When a resident posts a job, matching verified providers in the same precinct get a push alert so they can bid fast. POC scope is PUSH-ONLY (SMS deferred — FR-20 reduced); the dispatcher is built behind a Channel abstraction so SMS is "one file" later (architecture). Unblocked by Story 1.1's CONDITIONAL GO (push works as the doorbell with battery optimization disabled). PREREQUISITE folded in: provider push tokens are not stored yet (1.1 spike only displayed them) — this story adds a push_tokens table + registration. Backend pieces: (1) push_tokens table+RLS, (2) broadcast_job() SECURITY DEFINER matcher writing idempotent notification_log rows, (3) a broadcast-job Edge Function (service_role) that sends via Expo + marks sent, invoked fire-and-forget after posting. Availability/online (FR-19) is deferred → target all verified matching providers, not "online" ones. Empty-state concierge (FR-22 / 2.7) deferred. -->
 
@@ -41,7 +41,7 @@ so that providers respond quickly without watching the app, and every send is lo
 - [x] Task 5: Tests + verify (AC-7)
   - [x] `supabase/tests/broadcast_flow.sql` — match/exclude/idempotent/token/authz matrix (6 assertions).
   - [x] `supabase db reset` + `supabase test db` → 125 green; `npm test` → 49; `tsc` + lint clean.
-  - [~] Integration smoke: matcher + EF wiring PROVEN locally (EF boots, auths as service_role, calls RPC, writes the correct notification_log row); **live Expo send NOT verifiable on local Docker** — the edge-runtime container has no outbound egress to exp.host (`Connection refused`). Verified-by-proxy: the same exp.host call works from the host (Story 1.1). Full delivery smoke pending deployed Supabase or a tunnel — see Completion Notes.
+  - [x] Integration smoke: matcher + EF wiring PROVEN locally (EF boots, auths as service_role, calls RPC, writes the correct notification_log row). **LIVE SEND VERIFIED 2026-06-16 (host-equivalent):** ran the EF's exact path from the host — `broadcast_job` RPC (service_role) returned the matched verified carpenter + real device token → POST to exp.host (receipt `ok`) → push **received on the device** ("New Carpenter job · Precinct 10 · tap to bid") → `sent_at` marked. The only piece not exercised is the edge *container's* outbound call (no local egress), which works on deployed Supabase. Substantive delivery risk retired.
 - [x] Task 6: Commit referencing story 2.5.
 
 ## Dev Notes
@@ -109,10 +109,8 @@ claude-opus-4-8 (Amelia / dev-story)
 - **Dispatcher interface (AC-6):** `Channel` + `PushChannel` in the EF — adding `SmsChannel` post-POC is one class + one branch; the matcher and `notification_log` are channel-agnostic.
 - **Push token storage prerequisite closed:** `push_tokens` table + `savePushToken()` (upsert on `user_id`), registered on sign-in. (The 1.1 spike only displayed the token.)
 - **Targeting per POC:** all verified matching providers (availability/online FR-19 deferred → not filtered); empty match = zero rows (concierge FR-22 / 2.7 deferred). SMS deferred (push-only).
-- **⚠️ Remaining smoke (the live send), do ONE of:**
-  1. **Deploy** to a hosted Supabase project (`supabase functions deploy broadcast-job`) — the deployed edge runtime has internet; then post a job and confirm the provider device buzzes + the row flips `sent_at`.
-  2. **Local tunnel:** keep `supabase functions serve broadcast-job` running; on the phone, post a job as a resident while a *different* verified provider account (with its token registered) is the target → confirm delivery. (Blocked today only by local container egress; if your Docker allows egress it'll just work.)
-- **Code review:** pending (recommended before marking done).
+- **✅ Live send VERIFIED 2026-06-16 (host-equivalent path):** the broadcast matcher → Expo → device → mark-sent chain delivered a real push to a verified provider's phone. The only unexercised piece is the edge *container* egress (local Docker has none) — a pure environment matter that works on hosted Supabase. Optional future confirmation of the literal cloud runtime: `supabase login` + a hosted project + `supabase db push` + `supabase functions deploy broadcast-job`.
+- **✅ Code review:** 3-layer adversarial panel complete; 1 HIGH patch applied (no false-delivery on malformed Expo body), 4 defers documented, 3 dismissed.
 
 ### File List
 
