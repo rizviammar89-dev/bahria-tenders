@@ -30,7 +30,7 @@ export default function HomeScreen() {
           source={require('@/assets/images/watermark.png')}
           style={styles.watermark}
           contentFit="cover"
-          tintColor="#000000"
+          tintColor={Brand.primary}
           pointerEvents="none"
           accessibilityElementsHidden
         />
