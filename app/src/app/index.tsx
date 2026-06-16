@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 180,
     opacity: 0.5,
-    marginTop: -56,
+    marginTop: -110,
   },
   safeArea: {
     flex: 1,
