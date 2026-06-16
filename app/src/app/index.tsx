@@ -73,9 +73,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    bottom: 0,
+    top: '6%',
     width: '100%',
-    height: '32%',
+    height: '30%',
     opacity: 0.16,
   },
   safeArea: {
