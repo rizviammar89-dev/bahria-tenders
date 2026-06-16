@@ -23,7 +23,7 @@ export default function HomeScreen() {
           <Image
             source={require('@/assets/images/logo-horizontal.png')}
             style={styles.logo}
-            contentFit="contain"
+            contentFit="cover"
             accessibilityLabel="Bahria Tenders"
           />
           <Image
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 180,
     opacity: 0.5,
-    marginTop: -110,
+    marginTop: Spacing.two,
   },
   safeArea: {
     flex: 1,
@@ -86,10 +86,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: Spacing.four,
   },
-  brand: { width: '100%', alignItems: 'center', marginTop: 130 },
-  logo: { width: '100%', height: 460 },
+  brand: { width: '100%', alignItems: 'center', marginTop: 80 },
+  logo: { width: '100%', height: 210 },
   hero: { alignItems: 'center', gap: Spacing.one },
-  heroTitle: { fontSize: 34, lineHeight: 40, textAlign: 'center' },
+  heroTitle: { fontSize: 26, lineHeight: 32, textAlign: 'center' },
   heroAccent: { color: Brand.accent },
   heroSub: { textAlign: 'center', marginTop: Spacing.three, paddingHorizontal: Spacing.two },
   cta: {
