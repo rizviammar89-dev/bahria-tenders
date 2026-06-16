@@ -8,12 +8,19 @@ import { BidModal } from '@/components/bid-modal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Brand, Spacing } from '@/constants/theme';
-import { publishLocation, setAvailability, shouldPublish } from '@/lib/availability';
+import {
+  availabilityIsFresh,
+  fetchMyAvailability,
+  publishLocation,
+  setAvailability,
+  shouldPublish,
+} from '@/lib/availability';
 import { fetchOpenJobsForMyTrades, type OpenJob } from '@/lib/jobs';
 import { getCurrentPosition, requestForegroundPermission } from '@/lib/location';
 import { timeAgo } from '@/lib/time-ago';
 
 const PUBLISH_THROTTLE_MS = 20_000; // Story 6.2: bound battery — publish at most every ~20s
+const AVAILABILITY_WINDOW_MINS = 15; // mirrors provider_is_available's auto-expiry window
 
 export default function JobsFeedScreen() {
   const [jobs, setJobs] = useState<OpenJob[]>([]);
@@ -47,6 +54,18 @@ export default function JobsFeedScreen() {
       mounted.current = false;
     };
   }, [load]);
+
+  // Story 6.2: hydrate the toggle from the DB on mount, so the UI matches server state (and the
+  // publisher resumes) if the provider was still Available + fresh after an app restart.
+  useEffect(() => {
+    (async () => {
+      const { isAvailable, updatedAt } = await fetchMyAvailability();
+      if (!mounted.current) return;
+      if (isAvailable && availabilityIsFresh(updatedAt, Date.now(), AVAILABILITY_WINDOW_MINS)) {
+        setAvailable(true);
+      }
+    })();
+  }, []);
 
   // Story 6.2: toggle availability. Turning ON first asks for location permission (consent).
   async function onToggleAvailable() {

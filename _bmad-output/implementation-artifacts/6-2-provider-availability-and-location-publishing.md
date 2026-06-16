@@ -72,6 +72,20 @@ so that residents see me live on the map and accurate distances/visiting-charges
 - [Source: supabase/migrations/20260613063734_rls_policies.sql] — `profiles_update_own` + the column-scoped update grant to widen.
 - [Source: app/src/app/jobs-feed.tsx] — provider feed (toggle host); [Source: app/src/lib/push.ts] — guarded-non-fatal registration pattern to mirror for location.
 
+### Review Findings (code review 2026-06-16)
+
+Full 3-layer panel ran independently. Auditor: all 8 ACs satisfied at the code/test layer; "stops on Unavailable" and consent genuinely implemented; device smoke correctly deferred. One real correctness fix applied; the rest are device-tier tuning deferred to the 6.3 build (where real GPS/permission/AppState behavior can be observed) or accepted-by-design.
+
+- [x] [Review][Patch] **UI/server divergence** (Blind + Edge) — local `available` never hydrated from the DB, so after an app restart a still-Available provider showed "Unavailable" and the publisher didn't run (frozen location to residents until expiry). FIXED: `fetchMyAvailability()` + a mount effect that hydrates the toggle via `availabilityIsFresh` (also wires the previously-unused helper). [jobs-feed.tsx, availability.ts]
+- [x] [Review][Defer→6.3 smoke] `getCurrentPositionAsync` has no timeout — a budget phone with no GPS fix could hang a tick; add a `Promise.race` timeout when device-testing reveals real behavior. [location.ts]
+- [x] [Review][Defer→6.3 smoke] No `AppState` subscription — the interval keeps firing (no-op) in background instead of tearing down/resuming; tune with real foreground/background transitions. [jobs-feed.tsx]
+- [x] [Review][Defer→6.3 smoke] `lastPublishRef` stamped before the publish await (a failed publish still consumes the throttle window) + a trailing in-flight publish can emit one location after toggle-off; both low-impact, revisit at device smoke. [jobs-feed.tsx]
+- [x] [Review][Defer] `publishLocation`'s heartbeat update error is unreported (location upserts, heartbeat may not) — negligible (next 20s tick re-bumps); tidy post-POC. [availability.ts]
+
+**Accepted by design:** the 15-min auto-expiry IS the safety net for implicit stops (unmount/background/logout/crash) — explicit toggle-off writes `is_available=false`; implicit stops expire. Logout staleness is bounded by the same window.
+
+**Dismissed (verified):** `provider_is_available` SECURITY INVOKER works for cross-provider checks because `profiles_select_all` is `using(true)` (1.3) — not a fail-closed break; the second `grant update` is additive in Postgres (wording only); in-app consent is delivered via the OS permission dialog's manifest string (acceptable for the POC).
+
 ## Dev Agent Record
 
 ### Agent Model Used
