@@ -18,7 +18,8 @@ export async function getCurrentPosition(): Promise<{ lat: number; lng: number }
   try {
     const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
     return { lat: pos.coords.latitude, lng: pos.coords.longitude };
-  } catch {
+  } catch (e) {
+    console.warn('getCurrentPosition failed:', String(e)); // diagnostic: surfaces GPS-off / timeout
     return null;
   }
 }
