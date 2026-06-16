@@ -17,9 +17,9 @@ export default function HomeScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      {/* Brand watermark: the logo mark, large + faint, behind the content (mockup look). */}
+      {/* Brand watermark: faint Bahria Town skyline behind the content (mockup look). */}
       <Image
-        source={require('@/assets/images/splash-icon.png')}
+        source={require('@/assets/images/watermark.png')}
         style={styles.watermark}
         contentFit="contain"
         pointerEvents="none"
@@ -71,11 +71,12 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   watermark: {
     position: 'absolute',
-    top: '18%',
-    left: '10%',
-    width: '80%',
-    height: '60%',
-    opacity: 0.1,
+    left: 0,
+    right: 0,
+    bottom: '8%',
+    width: '100%',
+    height: '45%',
+    opacity: 0.14,
   },
   safeArea: {
     flex: 1,
