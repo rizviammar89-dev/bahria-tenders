@@ -11,7 +11,7 @@ export const Colors = {
   light: {
     // Brand look (mockup): cream canvas, white cards, sand selection, dark-green ink.
     text: '#1F2E24',
-    background: '#F5F2EA',
+    background: '#EFE8D6',
     backgroundElement: '#FFFFFF',
     backgroundSelected: '#E7D8B5',
     textSecondary: '#60646C',
