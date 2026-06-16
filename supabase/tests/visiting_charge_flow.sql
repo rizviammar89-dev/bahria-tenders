@@ -14,6 +14,9 @@ select ok(
 select ok(
   abs(public.haversine_km(24.8000, 67.0000, 24.8360, 67.0000) - 4.0) < 0.1,
   'haversine ~4.0 km for 0.036° latitude (within tolerance)');
+-- Antipodal points: the asin arg is clamped so this returns a finite ~half-circumference, never a domain error.
+select ok(public.haversine_km(0, 0, 0, 180) > 20000,
+  'antipodal distance is finite (asin clamp — no out-of-range error)');
 
 -- ---- Fixtures ----
 insert into auth.users (instance_id, id, aud, role, email, encrypted_password, created_at, updated_at) values
@@ -38,6 +41,11 @@ select 'cccc0000-0000-0000-0000-000000000002','11111111-1111-1111-1111-111111111
 insert into public.provider_locations (provider_id, lat, lng) values
  ('22222222-2222-2222-2222-222222222222', 24.8180, 67.0000),
  ('33333333-3333-3333-3333-333333333333', 24.8360, 67.0000);
+
+-- Out-of-range coordinates are rejected by the CHECK constraint.
+select throws_ok(
+  $$ insert into public.provider_locations (provider_id, lat, lng) values ('11111111-1111-1111-1111-111111111111', 500, 0) $$,
+  '23514', null, 'out-of-range latitude rejected by CHECK');
 
 -- ---- visiting_charge as the owning resident ----
 set local role authenticated;

@@ -96,7 +96,7 @@ development_status:
   epic-5-retrospective: optional
 
   epic-6: in-progress # POST-POC (drafted 2026-06-16) — live provider location map + distance-based visiting charge; see planning-artifacts/epic-6-live-location-maps.md. NOT in POC scope; build only on go-ahead. Reactivates FR-19 (availability), needs Google Maps billing + a new native build.
-  6-1-location-capture-and-charge-rule: review # POST-POC — jobs.lat/lng + provider_locations + haversine_km + visiting_charge (>3km/Rs250) rule; pure DB, no native build; 135 pgTAP (10 new) + 52 jest green; CR pending
+  6-1-location-capture-and-charge-rule: done # POST-POC — jobs.lat/lng + provider_locations + haversine_km + visiting_charge (>3km/Rs250); pure DB, no native build; REVIEWED (3-layer) + 2 patches (coord range CHECK, asin clamp); 137 pgTAP + 52 jest green. Defers logged for 6.2 (stale loc) + 6.4 (loc privacy, error UX)
   6-2-provider-availability-and-location-publishing: backlog # POST-POC — availability toggle (FR-19) + expo-location throttled publishing + consent
   6-3-maps-sdk-integration: backlog # POST-POC — react-native-maps + Google Maps key + new EAS dev build (infra)
   6-4-resident-live-map-and-visiting-charge: backlog # POST-POC — live map (Supabase Realtime) + Rs250 visiting-charge display

@@ -4,7 +4,7 @@ baseline_commit: 7224a87d58cf7b45824e87d6bb3b6b0825910b6e
 
 # Story 6.1: Location Capture + Distance & Visiting-Charge Rule (FR-26/FR-27 foundation)
 
-Status: review
+Status: done
 
 <!-- Epic 6 / live-location maps — the TESTABLE FOUNDATION, built first so the money-affecting Rs 250 rule is pgTAP-proven before any maps/billing/native-build work (6.3/6.4). PURE DB + a thin data-layer helper + jest. NO maps, NO expo-location, NO Realtime, NO native build — so this story ships with zero new infra (hot-reloads like every other JS change). The actual device GPS capture at post-time and the provider location publishing need expo-location (a native module) and land in 6.2/6.3 once the native build exists; here `createJob` just ACCEPTS optional coordinates (plumbing) and the schema + distance/charge functions are proven. -->
 
@@ -63,6 +63,18 @@ so that the cost-affecting logic is correct and proven before any maps, realtime
 - [Source: supabase/migrations/20260613063734_rls_policies.sql] — RLS + grant pattern to mirror for `provider_locations`.
 - [Source: supabase/migrations/20260616090000_broadcast.sql] — recent migration + SECURITY DEFINER vs INVOKER contrast (this story's functions are INVOKER).
 - [Source: _bmad-output/implementation-artifacts/3-1-rate-the-result.md] — pure-formatter + jest precedent (`reputationLabel`/`isValidStars`).
+
+### Review Findings (code review 2026-06-16)
+
+Full 3-layer adversarial panel ran independently. Auditor: all 6 ACs satisfied, build-free confirmed (no expo-location/react-native-maps, app.json untouched). Two cost-affecting fixes applied; the rest deferred to the stories that own them.
+
+- [x] [Review][Patch] **No coordinate range validation** (cost-affecting) — out-of-range/garbled coords silently produced a wrong charge. FIXED: CHECK constraints `lat ∈ [-90,90]` / `lng ∈ [-180,180]` on `jobs` (null-tolerant) and `provider_locations`; pgTAP asserts an out-of-range insert is rejected (23514). Note: this catches out-of-range, not a same-range lat/lng *swap* (not DB-detectable). [migration]
+- [x] [Review][Patch] **`asin` domain overflow → NaN/throw** — near-antipodal float rounding could push the arg past 1.0 and raise "out of range", which would surface as "no charge". FIXED: `least(1.0, …)` clamp; pgTAP asserts antipodal points return a finite distance. [migration: haversine_km]
+- [x] [Review][Defer] **`provider_locations` world-readable to all authenticated** (`select using(true)`) — exact coords exposed to every user, not just nearby residents. This is the locked "all-available visible" product choice, but precision/scoping should be revisited in **6.4** (e.g. only available providers, or distance-buckets via a DEFINER fn instead of raw coords). No consumer exists until 6.4. — deferred to 6.4
+- [x] [Review][Defer] **Stale provider locations** — nothing prunes old `provider_locations`; a moved-away provider yields a wrong charge. Staleness/auto-expiry is **6.2**'s availability mechanic (FR-19). — deferred to 6.2
+- [x] [Review][Defer] **`fetchVisitingCharge` returns charge 0 on RPC error** → label shows "" (indistinguishable from "no charge"). The `{error}` field is returned; **6.4** should surface errors distinctly rather than silently hiding the charge. — deferred to 6.4
+
+**Dismissed (intended / spec-faithful):** `> 3` boundary (exactly "more than 3 km" per the requirement; exact-3.0 is float-unreachable and intentionally → no charge); `visiting_charge` not status-aware (it's a pure lookup; the caller decides when to show it); `(0,0)` "null island" (in valid range; real GPS won't emit it; subsumed by the range guard intent).
 
 ## Dev Agent Record
 

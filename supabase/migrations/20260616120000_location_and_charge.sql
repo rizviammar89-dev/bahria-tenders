@@ -7,7 +7,10 @@
 -- ============================================================
 alter table public.jobs
   add column lat double precision,
-  add column lng double precision;
+  add column lng double precision,
+  -- Reject out-of-range coordinates (partial guard against bad/garbled GPS; nullable when absent).
+  add constraint jobs_lat_range_chk check (lat is null or (lat between -90 and 90)),
+  add constraint jobs_lng_range_chk check (lng is null or (lng between -180 and 180));
 
 -- ============================================================
 -- (2) provider_locations — latest position per provider. Provider writes own; residents read
@@ -15,8 +18,8 @@ alter table public.jobs
 -- ============================================================
 create table public.provider_locations (
   provider_id uuid primary key references public.profiles (id) on delete cascade,
-  lat         double precision not null,
-  lng         double precision not null,
+  lat         double precision not null check (lat between -90 and 90),
+  lng         double precision not null check (lng between -180 and 180),
   updated_at  timestamptz not null default now()
 );
 
@@ -47,11 +50,13 @@ create or replace function public.haversine_km(
 language sql
 immutable
 as $$
+  -- least(1.0, …) clamps the asin argument: float rounding can nudge it just past 1.0 for
+  -- near-antipodal points, which would otherwise raise "input is out of range".
   select 2 * 6371 * asin(
-    sqrt(
+    least(1.0, sqrt(
       sin(radians(lat2 - lat1) / 2) ^ 2
       + cos(radians(lat1)) * cos(radians(lat2)) * sin(radians(lng2 - lng1) / 2) ^ 2
-    )
+    ))
   );
 $$;
 
