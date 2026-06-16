@@ -1,7 +1,7 @@
 // Home tab: branded landing (brand mockup). Logo + hero + a role-aware Get Started CTA.
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -33,7 +33,7 @@ export default function HomeScreen() {
           accessibilityLabel="Bahria Tenders"
         />
 
-        <ThemedView style={styles.hero}>
+        <View style={styles.hero}>
           <ThemedText type="title" style={styles.heroTitle}>
             Reliable Services
           </ThemedText>
@@ -45,7 +45,7 @@ export default function HomeScreen() {
               ? 'Post a job and trusted providers in your precinct will send you a price.'
               : 'See jobs near you and send your price — get hired on your work, not the lowest bid.'}
           </ThemedText>
-        </ThemedView>
+        </View>
 
         <Pressable
           onPress={() => router.navigate(isResident ? '/post-job' : '/jobs-feed')}
@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     left: '10%',
     width: '80%',
     height: '60%',
-    opacity: 0.06,
+    opacity: 0.1,
   },
   safeArea: {
     flex: 1,
