@@ -29,7 +29,7 @@ export default function HomeScreen() {
         <Image
           source={require('@/assets/images/watermark.png')}
           style={styles.watermark}
-          contentFit="contain"
+          contentFit="cover"
           pointerEvents="none"
           accessibilityElementsHidden
         />
@@ -72,8 +72,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   watermark: {
     width: '100%',
-    height: 150,
-    opacity: 0.45,
+    height: 180,
+    opacity: 0.5,
   },
   safeArea: {
     flex: 1,
