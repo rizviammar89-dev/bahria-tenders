@@ -3,7 +3,10 @@
 // Upload goes to the public 'job-photos' Storage bucket at "<uid>/<jobId>/<n>.<ext>" (RLS locks
 // writes to the owner's folder; reads are public so providers can view via getPublicUrl).
 import { decode } from 'base64-arraybuffer';
-import * as ImagePicker from 'expo-image-picker';
+// Type-only import is erased at build time, so it never touches the native module. The runtime
+// module is loaded lazily (see loadImagePicker) so a build WITHOUT expo-image-picker's native
+// module (e.g. the pre-rebuild dev client) degrades to a no-op instead of crashing at startup.
+import type * as ImagePickerTypes from 'expo-image-picker';
 
 import { supabase } from '@/lib/supabase';
 
@@ -11,13 +14,25 @@ export type PickedPhoto = { uri: string; base64: string; mime: string };
 
 const MAX_PHOTOS = 5;
 
-function toPicked(asset: ImagePicker.ImagePickerAsset): PickedPhoto | null {
+function loadImagePicker(): typeof ImagePickerTypes | null {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return require('expo-image-picker') as typeof ImagePickerTypes;
+  } catch (e) {
+    console.warn('expo-image-picker unavailable (needs a dev build with the native module):', String(e));
+    return null;
+  }
+}
+
+function toPicked(asset: ImagePickerTypes.ImagePickerAsset): PickedPhoto | null {
   if (!asset.base64) return null;
   return { uri: asset.uri, base64: asset.base64, mime: asset.mimeType ?? 'image/jpeg' };
 }
 
 /** Pick up to 5 photos from the library. Returns [] on cancel, denial, or a pre-build client. */
 export async function pickJobPhotos(): Promise<PickedPhoto[]> {
+  const ImagePicker = loadImagePicker();
+  if (!ImagePicker) return [];
   try {
     const res = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
@@ -36,6 +51,8 @@ export async function pickJobPhotos(): Promise<PickedPhoto[]> {
 
 /** Take a single photo with the camera. Returns null on cancel, denial, or a pre-build client. */
 export async function takeJobPhoto(): Promise<PickedPhoto | null> {
+  const ImagePicker = loadImagePicker();
+  if (!ImagePicker) return null;
   try {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) return null;
