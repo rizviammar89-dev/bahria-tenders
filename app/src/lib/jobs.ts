@@ -100,6 +100,30 @@ export async function fetchVisitingCharge(
   return { distanceKm: row?.distance_km ?? null, chargePkr: row?.charge_pkr ?? 0, error: null };
 }
 
+export type AwardedJob = {
+  id: string;
+  description: string;
+  precinct: string;
+  status: 'awarded' | 'completed';
+  service: { display_en: string; display_ur: string } | null;
+};
+
+/** Jobs the signed-in provider has won (awarded or completed) — so they can contact the resident. */
+export async function fetchMyAwardedJobs(): Promise<{ jobs: AwardedJob[]; error: string | null }> {
+  const { data: userData } = await supabase.auth.getUser();
+  const uid = userData.user?.id;
+  if (!uid) return { jobs: [], error: 'You are not signed in.' };
+
+  const { data, error } = await supabase
+    .from('jobs')
+    .select('id, description, precinct, status, service:services(display_en, display_ur)')
+    .eq('awarded_provider_id', uid)
+    .in('status', ['awarded', 'completed'])
+    .order('created_at', { ascending: false });
+  if (error) return { jobs: [], error: error.message };
+  return { jobs: (data ?? []) as unknown as AwardedJob[], error: null };
+}
+
 export type OpenJob = {
   id: string;
   description: string;

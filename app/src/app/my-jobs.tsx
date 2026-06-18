@@ -20,6 +20,7 @@ import {
   type JobContacts,
   type MyJob,
 } from '@/lib/my-jobs';
+import { callNumber } from '@/lib/call';
 import { jobPhotoUrl } from '@/lib/job-photos';
 import { isValidStars } from '@/lib/rating';
 import { reputationLabel } from '@/lib/reputation';
@@ -297,9 +298,13 @@ export default function MyJobsScreen() {
                   {contacts[item.id] ? (
                     <ThemedView type="background" style={styles.contactBox}>
                       <ThemedText type="smallBold">{contacts[item.id].providerName}</ThemedText>
-                      <ThemedText type="default" selectable>
-                        {contacts[item.id].providerPhone}
-                      </ThemedText>
+                      <Pressable
+                        onPress={() => callNumber(contacts[item.id].providerPhone)}
+                        style={({ pressed }) => [styles.callButton, pressed && styles.pressed]}>
+                        <ThemedText type="default" style={styles.awardLabel}>
+                          📞 Call {contacts[item.id].providerName}
+                        </ThemedText>
+                      </Pressable>
                     </ThemedView>
                   ) : (
                     <Pressable
@@ -450,6 +455,15 @@ const styles = StyleSheet.create({
     marginTop: Spacing.two,
   },
   contactBox: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.two },
+  callButton: {
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.four,
+    borderRadius: Spacing.three,
+    backgroundColor: '#1B9E5A',
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   starRow: { flexDirection: 'row', gap: Spacing.two },
   star: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   reviewInput: {

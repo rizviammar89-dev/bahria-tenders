@@ -16,9 +16,11 @@ import {
   setAvailability,
   shouldPublish,
 } from '@/lib/availability';
+import { callNumber } from '@/lib/call';
 import { jobPhotoUrl } from '@/lib/job-photos';
-import { fetchOpenJobsForMyTrades, type OpenJob } from '@/lib/jobs';
+import { fetchMyAwardedJobs, fetchOpenJobsForMyTrades, type AwardedJob, type OpenJob } from '@/lib/jobs';
 import { getCurrentPosition, requestForegroundPermission } from '@/lib/location';
+import { getJobContacts } from '@/lib/my-jobs';
 import { timeAgo } from '@/lib/time-ago';
 
 const PUBLISH_THROTTLE_MS = 20_000; // Story 6.2: bound battery — publish at most every ~20s
@@ -26,6 +28,8 @@ const AVAILABILITY_WINDOW_MINS = 15; // mirrors provider_is_available's auto-exp
 
 export default function JobsFeedScreen() {
   const [jobs, setJobs] = useState<OpenJob[]>([]);
+  const [awardedJobs, setAwardedJobs] = useState<AwardedJob[]>([]);
+  const [callingJobId, setCallingJobId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -39,13 +43,28 @@ export default function JobsFeedScreen() {
 
   // Single fetch path, used by both the initial load and pull-to-refresh.
   const load = useCallback(async () => {
-    const { jobs: rows, error } = await fetchOpenJobsForMyTrades();
+    const [{ jobs: rows, error }, { jobs: awarded }] = await Promise.all([
+      fetchOpenJobsForMyTrades(),
+      fetchMyAwardedJobs(),
+    ]);
     if (!mounted.current) return; // unmounted mid-fetch → don't setState
     setNow(Date.now());
     setLoadError(error ? "Couldn't load jobs — pull to refresh." : null);
     if (!error) setJobs(rows);
+    setAwardedJobs(awarded);
     setLoaded(true);
   }, []);
+
+  // Reach the resident of a won job — fetch contacts then open the dialer (number never shown).
+  async function onCallResident(jobId: string) {
+    if (callingJobId) return;
+    setCallingJobId(jobId);
+    const { contacts, error } = await getJobContacts(jobId);
+    if (!mounted.current) return;
+    if (error || !contacts) setAvailMsg("Couldn't get the resident's contact — please try again.");
+    else callNumber(contacts.residentPhone);
+    setCallingJobId(null);
+  }
 
   useEffect(() => {
     mounted.current = true;
@@ -164,6 +183,33 @@ export default function JobsFeedScreen() {
                   {loadError}
                 </ThemedText>
               )}
+
+              {awardedJobs.length > 0 && (
+                <ThemedView style={styles.awardedSection}>
+                  <ThemedText type="smallBold">Your awarded jobs</ThemedText>
+                  {awardedJobs.map((aj) => (
+                    <ThemedView key={aj.id} type="backgroundElement" style={styles.awardedCard}>
+                      <ThemedText type="smallBold">
+                        {aj.service ? `${aj.service.display_en} · ${aj.service.display_ur}` : 'Job'}
+                      </ThemedText>
+                      <ThemedText type="small" themeColor="textSecondary">
+                        {aj.precinct} · {aj.status === 'completed' ? 'Completed' : 'Awarded to you'}
+                      </ThemedText>
+                      <ThemedText type="default">{aj.description}</ThemedText>
+                      <Pressable
+                        onPress={() => onCallResident(aj.id)}
+                        disabled={callingJobId !== null}
+                        style={({ pressed }) => [styles.callButton, pressed && styles.pressed]}>
+                        <ThemedText type="default" style={styles.callLabel}>
+                          {callingJobId === aj.id ? 'Connecting…' : '📞 Call resident'}
+                        </ThemedText>
+                      </Pressable>
+                    </ThemedView>
+                  ))}
+                </ThemedView>
+              )}
+
+              {jobs.length > 0 && <ThemedText type="smallBold">Open jobs</ThemedText>}
             </ThemedView>
           }
           ListEmptyComponent={
@@ -240,6 +286,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   card: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.two, minHeight: 64 },
+  awardedSection: { gap: Spacing.two, marginTop: Spacing.one },
+  awardedCard: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.two },
+  callButton: {
+    marginTop: Spacing.one,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.four,
+    borderRadius: Spacing.three,
+    backgroundColor: '#1B9E5A',
+    alignSelf: 'flex-start',
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  callLabel: { color: '#ffffff' },
   thumbRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   thumb: { width: 72, height: 72, borderRadius: Spacing.two, backgroundColor: '#eee' },
   empty: { padding: Spacing.four, borderRadius: Spacing.three, gap: Spacing.one },
