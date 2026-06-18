@@ -13,7 +13,10 @@ export type BidWithProvider = {
 export type MyJob = {
   id: string;
   description: string;
+  address_unit: string | null;
+  address_street: string | null;
   precinct: string;
+  photo_paths: string[];
   status: 'open' | 'awarded' | 'completed' | 'cancelled';
   created_at: string;
   awarded_provider_id: string | null;
@@ -38,7 +41,7 @@ export async function fetchMyJobs(): Promise<{ jobs: MyJob[]; error: string | nu
   const { data, error } = await supabase
     .from('jobs')
     .select(
-      'id, description, precinct, status, created_at, awarded_provider_id, service:services(display_en, display_ur), bids!bids_job_id_fkey(id, price_pkr, note, provider:profiles(id, full_name, rating_sum, rating_count)), rating:ratings(stars, review)',
+      'id, description, address_unit, address_street, precinct, photo_paths, status, created_at, awarded_provider_id, service:services(display_en, display_ur), bids!bids_job_id_fkey(id, price_pkr, note, provider:profiles(id, full_name, rating_sum, rating_count)), rating:ratings(stars, review)',
     )
     .eq('resident_id', uid)
     .neq('status', 'cancelled')
@@ -53,6 +56,22 @@ export async function fetchMyJobs(): Promise<{ jobs: MyJob[]; error: string | nu
     return { ...j, rating };
   }) as unknown as MyJob[];
   return { jobs, error: null };
+}
+
+/**
+ * "Delete" a job from the resident's list — a soft-cancel (the schema has no client DELETE by
+ * design: `cancelled_at` + the consistency CHECK + the RLS "soft-cancel only" comment). Sets
+ * status to 'cancelled' (+ cancelled_at to satisfy jobs_cancel_consistency_chk). fetchMyJobs
+ * already excludes cancelled rows, so the job disappears from the list while bids/ratings/logs
+ * persist. Completed jobs are excluded — they're historical (and may be rated), so can't be removed.
+ */
+export async function cancelJob(jobId: string): Promise<{ error: string | null }> {
+  const { error } = await supabase
+    .from('jobs')
+    .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
+    .eq('id', jobId)
+    .neq('status', 'completed');
+  return { error: error ? error.message : null };
 }
 
 /** Award an open job to a provider who bid (SECURITY DEFINER RPC enforces the rules). */

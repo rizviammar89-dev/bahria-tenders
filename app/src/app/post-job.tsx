@@ -1,8 +1,9 @@
 // Story 2.1: Post a Job (FR-6). Resident picks a trade, describes the problem, confirms
 // precinct, and posts. Insert goes through the authed client under RLS jobs_insert_own.
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { Image } from 'expo-image';
 import { useEffect, useState, type ComponentProps } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -10,7 +11,9 @@ import { ThemedView } from '@/components/themed-view';
 import { Brand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { validateJobDraft } from '@/lib/job-draft';
+import { pickJobPhotos, type PickedPhoto } from '@/lib/job-photos';
 import { createJob, fetchMyPrecinct, fetchServices, type Service } from '@/lib/jobs';
+import { getCurrentPosition, requestForegroundPermission, reverseGeocode } from '@/lib/location';
 
 // Map each trade slug to a Material Community icon for the tile grid.
 type IconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
@@ -28,7 +31,13 @@ export default function PostJobScreen() {
   const [services, setServices] = useState<Service[]>([]);
   const [serviceId, setServiceId] = useState('');
   const [description, setDescription] = useState('');
+  const [photos, setPhotos] = useState<PickedPhoto[]>([]);
+  const [addressUnit, setAddressUnit] = useState('');
+  const [addressStreet, setAddressStreet] = useState('');
   const [precinct, setPrecinct] = useState('');
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [locationNote, setLocationNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [posted, setPosted] = useState(false);
@@ -54,19 +63,59 @@ export default function PostJobScreen() {
     };
   }, []);
 
+  const MAX_PHOTOS = 5;
+  async function onAddPhotos() {
+    const picked = await pickJobPhotos();
+    if (picked.length) setPhotos((prev) => [...prev, ...picked].slice(0, MAX_PHOTOS));
+  }
+  function removePhoto(uri: string) {
+    setPhotos((prev) => prev.filter((p) => p.uri !== uri));
+  }
+
+  async function onUseLocation() {
+    if (locating) return;
+    setLocating(true);
+    setLocationNote(null);
+    const granted = await requestForegroundPermission();
+    if (!granted) {
+      setLocationNote('Location permission denied. Enable it in Settings to use GPS.');
+      setLocating(false);
+      return;
+    }
+    const pos = await getCurrentPosition();
+    if (!pos) {
+      setLocationNote("Couldn't get your location — make sure GPS is on, then try again.");
+      setLocating(false);
+      return;
+    }
+    setCoords(pos);
+    // Best-effort: pre-fill the street (and precinct if still blank) from the GPS fix. The user
+    // can edit; the captured coordinates are what drive the distance/visiting-charge rule.
+    const geo = await reverseGeocode(pos.lat, pos.lng);
+    if (geo?.street) setAddressStreet(geo.street);
+    if (geo?.district && !precinct.trim()) setPrecinct(geo.district);
+    setLocationNote('📍 Location captured — review the address below and edit if needed.');
+    setLocating(false);
+  }
+
   async function onPost() {
     if (busy) return; // guard against a double-tap before the disabled state renders
     setBusy(true);
     setError(null);
     setPosted(false);
-    const draft = { serviceId, description, precinct };
+    const draft = { serviceId, description, addressUnit, addressStreet, precinct };
     const check = validateJobDraft(draft);
     if (!check.ok) {
       setError(check.error);
       setBusy(false);
       return;
     }
-    const { error: postError } = await createJob(draft);
+    const { error: postError } = await createJob({
+      ...draft,
+      lat: coords?.lat,
+      lng: coords?.lng,
+      photos,
+    });
     if (postError) {
       console.warn('createJob failed:', postError); // keep the real cause for field debugging
       setError("Couldn't post your job — please try again.");
@@ -77,6 +126,9 @@ export default function PostJobScreen() {
     setPosted(true);
     setServiceId('');
     setDescription('');
+    setPhotos([]);
+    setCoords(null);
+    setLocationNote(null);
     setBusy(false);
   }
 
@@ -144,7 +196,68 @@ export default function PostJobScreen() {
             style={[styles.input, styles.multiline]}
           />
 
-          <ThemedText type="smallBold">Precinct</ThemedText>
+          <Pressable
+            onPress={onAddPhotos}
+            disabled={photos.length >= MAX_PHOTOS}
+            style={({ pressed }) => [
+              styles.locationButton,
+              photos.length >= MAX_PHOTOS && styles.disabledButton,
+              pressed && styles.pressed,
+            ]}>
+            <MaterialCommunityIcons name="camera-plus-outline" size={20} color={Brand.primary} />
+            <ThemedText type="default" style={styles.locationLabel}>
+              {photos.length ? `Add more photos (${photos.length}/${MAX_PHOTOS})` : 'Add photos'}
+            </ThemedText>
+          </Pressable>
+          {photos.length > 0 && (
+            <View style={styles.thumbRow}>
+              {photos.map((p) => (
+                <View key={p.uri} style={styles.thumbWrap}>
+                  <Image source={{ uri: p.uri }} style={styles.thumb} contentFit="cover" />
+                  <Pressable
+                    onPress={() => removePhoto(p.uri)}
+                    hitSlop={8}
+                    style={styles.thumbRemove}>
+                    <MaterialCommunityIcons name="close-circle" size={22} color="#c0392b" />
+                  </Pressable>
+                </View>
+              ))}
+            </View>
+          )}
+
+          <ThemedText type="smallBold">Address</ThemedText>
+          <Pressable
+            onPress={onUseLocation}
+            disabled={locating}
+            style={({ pressed }) => [styles.locationButton, pressed && styles.pressed]}>
+            <MaterialCommunityIcons name="crosshairs-gps" size={20} color={Brand.primary} />
+            <ThemedText type="default" style={styles.locationLabel}>
+              {locating ? 'Getting location…' : coords ? 'Update current location' : 'Use current location'}
+            </ThemedText>
+          </Pressable>
+          {locationNote && (
+            <ThemedText type="small" themeColor="textSecondary">
+              {locationNote}
+            </ThemedText>
+          )}
+
+          <ThemedText type="smallBold">Villa / Apartment Number</ThemedText>
+          <TextInput
+            value={addressUnit}
+            onChangeText={setAddressUnit}
+            placeholder="e.g. Villa 123 / Apartment 4B"
+            style={styles.input}
+          />
+
+          <ThemedText type="smallBold">Street / Building Name & Number</ThemedText>
+          <TextInput
+            value={addressStreet}
+            onChangeText={setAddressStreet}
+            placeholder="e.g. Rose Street 12 / Sapphire Tower"
+            style={styles.input}
+          />
+
+          <ThemedText type="smallBold">Precinct Number</ThemedText>
           <TextInput
             value={precinct}
             onChangeText={setPrecinct}
@@ -199,6 +312,30 @@ const styles = StyleSheet.create({
     minHeight: 52,
   },
   multiline: { minHeight: 96, textAlignVertical: 'top' },
+  locationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.two,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.four,
+    borderRadius: Spacing.three,
+    borderWidth: 1,
+    borderColor: Brand.primary,
+    minHeight: 48,
+  },
+  locationLabel: { color: Brand.primary },
+  thumbRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
+  thumbWrap: { position: 'relative' },
+  thumb: { width: 72, height: 72, borderRadius: Spacing.two, backgroundColor: '#eee' },
+  thumbRemove: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#fff',
+    borderRadius: 11,
+  },
+  disabledButton: { opacity: 0.5 },
   error: { color: '#c0392b' },
   button: {
     marginTop: Spacing.two,

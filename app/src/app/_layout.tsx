@@ -6,9 +6,8 @@ import {
   useFonts,
 } from '@expo-google-fonts/montserrat';
 import * as Notifications from 'expo-notifications';
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
+import { DefaultTheme, ThemeProvider } from 'expo-router';
 import { useEffect } from 'react';
-import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import AppTabs from '@/components/app-tabs';
@@ -42,17 +41,18 @@ function Gate() {
 }
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
   // Brand: load Montserrat before rendering so text doesn't flash in the system font.
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     Montserrat_400Regular,
     Montserrat_500Medium,
     Montserrat_600SemiBold,
     Montserrat_700Bold,
   });
-  if (!fontsLoaded) return null; // the splash screen covers this brief load
+  // Render once fonts load OR if loading errors — otherwise a failed font fetch in a dev
+  // build would leave the whole app returning null forever (permanent grey screen).
+  if (!fontsLoaded && !fontError) return null; // the splash screen covers this brief load
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={DefaultTheme}>
       <AuthProvider>
         <AnimatedSplashOverlay />
         <Gate />

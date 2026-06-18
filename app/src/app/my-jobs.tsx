@@ -1,7 +1,9 @@
 // Story 2.8: the resident's My Jobs — compare bids (NOT cheapest-sorted), award on merit,
 // then reveal contact details. Award + contacts go through SECURITY DEFINER RPCs.
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, StyleSheet, TextInput } from 'react-native';
+import { Image } from 'expo-image';
+import { Alert, FlatList, Pressable, RefreshControl, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -9,6 +11,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Brand, Spacing } from '@/constants/theme';
 import {
   awardJob,
+  cancelJob,
   completeJob,
   fetchMyJobs,
   getJobContacts,
@@ -16,6 +19,7 @@ import {
   type JobContacts,
   type MyJob,
 } from '@/lib/my-jobs';
+import { jobPhotoUrl } from '@/lib/job-photos';
 import { isValidStars } from '@/lib/rating';
 import { reputationLabel } from '@/lib/reputation';
 
@@ -33,6 +37,7 @@ export default function MyJobsScreen() {
   const [loaded, setLoaded] = useState(false);
   const [awardingBidId, setAwardingBidId] = useState<string | null>(null); // only this bid's button disables
   const [completingJobId, setCompletingJobId] = useState<string | null>(null); // only this job's button disables
+  const [deletingJobId, setDeletingJobId] = useState<string | null>(null); // only this job's delete disables
   const [message, setMessage] = useState<string | null>(null);
   const [contacts, setContacts] = useState<Record<string, JobContacts>>({});
   const [ratingJobId, setRatingJobId] = useState<string | null>(null); // only this job's submit disables
@@ -50,13 +55,19 @@ export default function MyJobsScreen() {
 
   useEffect(() => {
     mounted.current = true;
-    // Fetch-on-mount: load() only setStates after the await (in a callback), not synchronously.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load();
     return () => {
       mounted.current = false;
     };
-  }, [load]);
+  }, []);
+
+  // Refetch every time the screen comes into focus — i.e. each time the user taps the My Jobs
+  // tab (or navigates back to it) — so the list is always current without a manual pull-to-refresh.
+  // Also covers the initial mount, since focus fires on first render too.
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -101,6 +112,42 @@ export default function MyJobsScreen() {
     // re-enables the button and a fast re-tap can't trigger a spurious "couldn't complete" error.
     await load();
     if (mounted.current) setCompletingJobId(null);
+  }
+
+  function onDelete(jobId: string, status: MyJob['status']) {
+    if (deletingJobId) return; // a delete is already in flight
+    const awarded = status === 'awarded';
+    Alert.alert(
+      'Delete this job?',
+      awarded
+        ? 'This job is awarded. Deleting it removes it from your list and cancels the arrangement with the provider. This cannot be undone.'
+        : 'This removes the job from your list and stops it taking new bids. This cannot be undone.',
+      [
+        { text: 'Keep', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setDeletingJobId(jobId);
+            setMessage(null);
+            const { error } = await cancelJob(jobId);
+            if (!mounted.current) return;
+            if (error) {
+              console.warn('cancelJob failed:', error);
+              setMessage("Couldn't delete the job — please try again.");
+              setDeletingJobId(null);
+              return;
+            }
+            // Keep the lock until the refresh lands so the row (now cancelled) is gone before re-enabling.
+            await load();
+            if (mounted.current) {
+              setMessage('Job deleted.');
+              setDeletingJobId(null);
+            }
+          },
+        },
+      ],
+    );
   }
 
   async function onSubmitRating(jobId: string, providerId: string) {
@@ -178,9 +225,25 @@ export default function MyJobsScreen() {
                 {item.service ? `${item.service.display_en} · ${item.service.display_ur}` : 'Job'}
               </ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
-                {item.precinct} · {STATUS_LABEL[item.status]}
+                {[item.address_unit, item.address_street, item.precinct].filter(Boolean).join(', ')}
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                {STATUS_LABEL[item.status]}
               </ThemedText>
               <ThemedText type="default">{item.description}</ThemedText>
+
+              {item.photo_paths.length > 0 && (
+                <View style={styles.thumbRow}>
+                  {item.photo_paths.map((path) => (
+                    <Image
+                      key={path}
+                      source={{ uri: jobPhotoUrl(path) }}
+                      style={styles.thumb}
+                      contentFit="cover"
+                    />
+                  ))}
+                </View>
+              )}
 
               {item.status === 'open' &&
                 (item.bids.length === 0 ? (
@@ -307,6 +370,23 @@ export default function MyJobsScreen() {
                     </Pressable>
                   </ThemedView>
                 ))}
+
+              {/* Delete (soft-cancel): removes the job from the list. Not offered on completed
+                  jobs — those are historical and may be rated. */}
+              {item.status !== 'completed' && (
+                <Pressable
+                  onPress={() => onDelete(item.id, item.status)}
+                  disabled={deletingJobId !== null}
+                  style={({ pressed }) => [
+                    styles.deleteButton,
+                    deletingJobId !== null && styles.disabledButton,
+                    pressed && styles.pressed,
+                  ]}>
+                  <ThemedText type="default" style={styles.deleteLabel}>
+                    {deletingJobId === item.id ? 'Deleting…' : 'Delete job'}
+                  </ThemedText>
+                </Pressable>
+              )}
             </ThemedView>
           )}
         />
@@ -324,6 +404,8 @@ const styles = StyleSheet.create({
   empty: { padding: Spacing.four, borderRadius: Spacing.three, gap: Spacing.one },
   error: { color: '#c0392b' },
   jobCard: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.two },
+  thumbRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
+  thumb: { width: 72, height: 72, borderRadius: Spacing.two, backgroundColor: '#eee' },
   bidRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -365,4 +447,16 @@ const styles = StyleSheet.create({
   },
   disabledButton: { opacity: 0.5 },
   pressed: { opacity: 0.7 },
+  deleteButton: {
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.four,
+    borderRadius: Spacing.three,
+    borderWidth: 1,
+    borderColor: '#c0392b',
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: Spacing.two,
+  },
+  deleteLabel: { color: '#c0392b' },
 });

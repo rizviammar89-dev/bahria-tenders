@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "app",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "ios": {
       "icon": "./assets/expo.icon"
     },
@@ -26,6 +26,13 @@
     "plugins": [
       "expo-router",
       "expo-notifications",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Bahria Tenders needs access to your photos so you can attach pictures of the problem to a job.",
+          "cameraPermission": "Bahria Tenders needs camera access so you can take a photo of the problem to attach to a job."
+        }
+      ],
       [
         "expo-location",
         {

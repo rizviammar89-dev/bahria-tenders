@@ -1,7 +1,8 @@
 // Story 2.3: Provider Job Discovery (FR-7). A verified provider sees open jobs in their
 // trades. RLS jobs_select_visible is the security backstop; the query filters to relevance.
+import { Image } from 'expo-image';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, FlatList, Pressable, RefreshControl, StyleSheet } from 'react-native';
+import { AppState, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BidModal } from '@/components/bid-modal';
@@ -15,6 +16,7 @@ import {
   setAvailability,
   shouldPublish,
 } from '@/lib/availability';
+import { jobPhotoUrl } from '@/lib/job-photos';
 import { fetchOpenJobsForMyTrades, type OpenJob } from '@/lib/jobs';
 import { getCurrentPosition, requestForegroundPermission } from '@/lib/location';
 import { timeAgo } from '@/lib/time-ago';
@@ -183,6 +185,18 @@ export default function JobsFeedScreen() {
                 {item.precinct} · {timeAgo(item.created_at, now)}
               </ThemedText>
               <ThemedText type="default">{item.description}</ThemedText>
+              {item.photo_paths.length > 0 && (
+                <View style={styles.thumbRow}>
+                  {item.photo_paths.map((path) => (
+                    <Image
+                      key={path}
+                      source={{ uri: jobPhotoUrl(path) }}
+                      style={styles.thumb}
+                      contentFit="cover"
+                    />
+                  ))}
+                </View>
+              )}
               <Pressable
                 onPress={() => {
                   setConfirmation(null);
@@ -226,6 +240,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   card: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.two, minHeight: 64 },
+  thumbRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
+  thumb: { width: 72, height: 72, borderRadius: Spacing.two, backgroundColor: '#eee' },
   empty: { padding: Spacing.four, borderRadius: Spacing.three, gap: Spacing.one },
   error: { color: '#c0392b' },
   bidButton: {

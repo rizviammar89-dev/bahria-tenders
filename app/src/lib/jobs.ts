@@ -1,5 +1,6 @@
 // Story 2.1: data layer for posting a job. All access goes through the authed client;
 // RLS (Story 1.3) enforces resident_id = auth.uid() on insert and row visibility.
+import { uploadJobPhotos, type PickedPhoto } from '@/lib/job-photos';
 import { supabase } from '@/lib/supabase';
 
 export type Service = { id: string; slug: string; display_en: string; display_ur: string };
@@ -28,11 +29,14 @@ export async function fetchMyPrecinct(): Promise<string | null> {
 export async function createJob(input: {
   serviceId: string;
   description: string;
-  precinct: string;
-  // Story 6.1: optional resident coordinates for the distance/visiting-charge rule. Omitted
-  // today (no GPS capture UI until the maps native build); stored as null when absent.
+  addressUnit: string; // Villa / Apartment number
+  addressStreet: string; // Street / Building name
+  precinct: string; // Precinct number
+  // Story 6.1: optional resident coordinates for the distance/visiting-charge rule.
   lat?: number;
   lng?: number;
+  // Quick-dev: problem photos picked in the UI, uploaded after the row is inserted.
+  photos?: PickedPhoto[];
 }): Promise<{ error: string | null }> {
   const { data: userData } = await supabase.auth.getUser();
   const uid = userData.user?.id;
@@ -44,6 +48,8 @@ export async function createJob(input: {
       resident_id: uid,
       service_id: input.serviceId,
       description: input.description.trim(),
+      address_unit: input.addressUnit.trim(),
+      address_street: input.addressStreet.trim(),
       precinct: input.precinct.trim(),
       lat: input.lat ?? null,
       lng: input.lng ?? null,
@@ -51,6 +57,19 @@ export async function createJob(input: {
     .select('id')
     .single();
   if (error) return { error: error.message };
+
+  // Upload photos (if any) and record their paths BEFORE broadcasting, so providers who open the
+  // push notification see the pictures. A failed upload is non-fatal — the job still posts.
+  if (input.photos?.length) {
+    const paths = await uploadJobPhotos(uid, data.id, input.photos);
+    if (paths.length) {
+      const { error: photoErr } = await supabase
+        .from('jobs')
+        .update({ photo_paths: paths })
+        .eq('id', data.id);
+      if (photoErr) console.warn('saving photo paths failed:', photoErr.message);
+    }
+  }
 
   // Story 2.5: broadcast to matching providers — FIRE-AND-FORGET. Must NOT block or fail the
   // resident's post; a broadcast error is logged only. notification_log + retry live server-side.
@@ -85,6 +104,7 @@ export type OpenJob = {
   id: string;
   description: string;
   precinct: string;
+  photo_paths: string[];
   created_at: string;
   service: { display_en: string; display_ur: string } | null;
   // The signed-in provider's own bid on this job, if any (RLS returns only the caller's bid).
@@ -113,7 +133,7 @@ export async function fetchOpenJobsForMyTrades(): Promise<{ jobs: OpenJob[]; err
 
   const { data, error } = await supabase
     .from('jobs')
-    .select('id, description, precinct, created_at, service:services(display_en, display_ur), bids(id, price_pkr, note)')
+    .select('id, description, precinct, photo_paths, created_at, service:services(display_en, display_ur), bids(id, price_pkr, note)')
     .eq('status', 'open')
     .in('service_id', profile.service_ids as string[])
     .neq('resident_id', uid)

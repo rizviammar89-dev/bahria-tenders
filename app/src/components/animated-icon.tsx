@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
 import Animated, { Easing, Keyframe } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
@@ -11,6 +11,14 @@ const DURATION = 600;
 
 export function AnimatedSplashOverlay() {
   const [visible, setVisible] = useState(true);
+
+  // Fallback: if the reanimated `withCallback` worklet never fires (e.g. a
+  // worklets/reanimated native mismatch in a dev build), the dark overlay would
+  // otherwise cover the whole app forever. Always dismiss after the animation.
+  useEffect(() => {
+    const t = setTimeout(() => setVisible(false), DURATION + 300);
+    return () => clearTimeout(t);
+  }, []);
 
   if (!visible) return null;
 

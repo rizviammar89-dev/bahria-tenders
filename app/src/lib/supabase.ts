@@ -2,7 +2,7 @@
 // Session persists in AsyncStorage; tokens auto-refresh while the app is foregrounded.
 // Only the ANON key ships in the app — RLS (Story 1.3) is what protects data.
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, processLock } from '@supabase/supabase-js';
 import { AppState } from 'react-native';
 
 // EXPO_PUBLIC_ vars are inlined at build time and MUST be read via static dot-access.
@@ -21,6 +21,10 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false, // no URL to parse in React Native
+    // React Native's runtime exposes a partial `navigator.locks` that never resolves, so
+    // supabase-js's default Web Locks adapter makes getSession() hang forever (permanent
+    // "loading" / blank screen). processLock is Supabase's RN-safe in-memory lock.
+    lock: processLock,
   },
 });
 

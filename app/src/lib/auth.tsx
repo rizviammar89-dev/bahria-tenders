@@ -26,20 +26,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // (never an awaited supabase call — that can deadlock the client).
   useEffect(() => {
     let mounted = true;
+    let settled = false;
+    const markLoaded = (next: Session | null) => {
+      if (!mounted) return;
+      settled = true;
+      setSession(next);
+      setSessionLoaded(true);
+    };
     supabase.auth
       .getSession()
-      .then(({ data }) => {
-        if (mounted) {
-          setSession(data.session);
-          setSessionLoaded(true);
-        }
-      })
-      .catch(() => {
-        if (mounted) {
-          setSession(null);
-          setSessionLoaded(true);
-        }
-      });
+      .then(({ data }) => markLoaded(data.session))
+      .catch(() => markLoaded(null));
+    // Safety net: if the backend is unreachable, supabase-js's startup token refresh can hang
+    // with no timeout, leaving the app stuck on the splash forever. Fall back to the signed-out
+    // state so the user at least reaches the login screen instead of a frozen blank screen.
+    const t = setTimeout(() => {
+      if (mounted && !settled) markLoaded(null);
+    }, 8000);
     const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
       if (mounted) {
         setSession(next);
@@ -48,6 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     return () => {
       mounted = false;
+      clearTimeout(t);
       sub.subscription.unsubscribe();
     };
   }, []);

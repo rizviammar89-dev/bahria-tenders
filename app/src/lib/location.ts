@@ -23,3 +23,24 @@ export async function getCurrentPosition(): Promise<{ lat: number; lng: number }
     return null;
   }
 }
+
+/**
+ * Best-effort reverse geocode used to PRE-FILL the address text fields from GPS — the user can
+ * still edit. Bahria-specific villa/precinct numbers won't come back reliably, so we only surface
+ * a street and a district hint. Guarded: returns null on the pre-build client or any failure.
+ */
+export async function reverseGeocode(
+  lat: number,
+  lng: number,
+): Promise<{ street: string | null; district: string | null } | null> {
+  try {
+    const [a] = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
+    if (!a) return null;
+    const street = [a.streetNumber, a.street].filter(Boolean).join(' ') || a.name || null;
+    const district = a.district ?? a.subregion ?? null;
+    return { street, district };
+  } catch (e) {
+    console.warn('reverseGeocode failed:', String(e));
+    return null;
+  }
+}
