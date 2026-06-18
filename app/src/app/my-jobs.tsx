@@ -6,6 +6,7 @@ import { Image } from 'expo-image';
 import { Alert, FlatList, Pressable, RefreshControl, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ProviderProfileModal } from '@/components/provider-profile-modal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Brand, Spacing } from '@/constants/theme';
@@ -38,6 +39,7 @@ export default function MyJobsScreen() {
   const [awardingBidId, setAwardingBidId] = useState<string | null>(null); // only this bid's button disables
   const [completingJobId, setCompletingJobId] = useState<string | null>(null); // only this job's button disables
   const [deletingJobId, setDeletingJobId] = useState<string | null>(null); // only this job's delete disables
+  const [viewProviderId, setViewProviderId] = useState<string | null>(null); // open a bidder's read-only profile
   const [message, setMessage] = useState<string | null>(null);
   const [contacts, setContacts] = useState<Record<string, JobContacts>>({});
   const [ratingJobId, setRatingJobId] = useState<string | null>(null); // only this job's submit disables
@@ -265,6 +267,15 @@ export default function MyJobsScreen() {
                           })}
                           {bid.note ? ` · ${bid.note}` : ''}
                         </ThemedText>
+                        {bid.provider && (
+                          <Pressable
+                            onPress={() => setViewProviderId(bid.provider!.id)}
+                            hitSlop={6}>
+                            <ThemedText type="small" style={styles.providerLink}>
+                              View profile
+                            </ThemedText>
+                          </Pressable>
+                        )}
                       </ThemedView>
                       <Pressable
                         onPress={() =>
@@ -390,6 +401,10 @@ export default function MyJobsScreen() {
             </ThemedView>
           )}
         />
+        <ProviderProfileModal
+          providerId={viewProviderId}
+          onClose={() => setViewProviderId(null)}
+        />
       </SafeAreaView>
     </ThemedView>
   );
@@ -414,6 +429,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.one,
   },
   bidInfo: { flex: 1, gap: Spacing.half },
+  providerLink: { color: Brand.primary, textDecorationLine: 'underline' },
   awardButton: {
     paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.four,
