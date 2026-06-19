@@ -25,6 +25,10 @@ export type MyJob = {
   lng: number | null;
   preferred_date: string | null;
   preferred_slot: 'morning' | 'afternoon' | 'evening' | null;
+  scheduled_date: string | null;
+  scheduled_slot: 'morning' | 'afternoon' | 'evening' | null;
+  schedule_proposed_by: string | null;
+  schedule_confirmed: boolean;
   service: { display_en: string; display_ur: string } | null;
   bids: BidWithProvider[];
   rating: { stars: number; review: string | null } | null;
@@ -46,7 +50,7 @@ export async function fetchMyJobs(): Promise<{ jobs: MyJob[]; error: string | nu
   const { data, error } = await supabase
     .from('jobs')
     .select(
-      'id, description, address_unit, address_street, precinct, photo_paths, status, created_at, awarded_provider_id, service_id, lat, lng, preferred_date, preferred_slot, service:services(display_en, display_ur), bids!bids_job_id_fkey(id, price_pkr, note, provider:profiles(id, full_name, rating_sum, rating_count)), rating:ratings(stars, review)',
+      'id, description, address_unit, address_street, precinct, photo_paths, status, created_at, awarded_provider_id, service_id, lat, lng, preferred_date, preferred_slot, scheduled_date, scheduled_slot, schedule_proposed_by, schedule_confirmed, service:services(display_en, display_ur), bids!bids_job_id_fkey(id, price_pkr, note, provider:profiles(id, full_name, rating_sum, rating_count)), rating:ratings(stars, review)',
     )
     .eq('resident_id', uid)
     .neq('status', 'cancelled')

@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BidModal } from '@/components/bid-modal';
 import { ChatModal, type ChatThread } from '@/components/chat-modal';
+import { ScheduleCard } from '@/components/schedule-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Brand, Spacing } from '@/constants/theme';
@@ -227,6 +228,17 @@ export default function JobsFeedScreen() {
                           </Pressable>
                         )}
                       </View>
+                      {aj.status === 'awarded' && (
+                        <ScheduleCard
+                          jobId={aj.id}
+                          myUid={myUid}
+                          scheduledDate={aj.scheduled_date}
+                          scheduledSlot={aj.scheduled_slot}
+                          proposedBy={aj.schedule_proposed_by}
+                          confirmed={aj.schedule_confirmed}
+                          onChanged={load}
+                        />
+                      )}
                     </ThemedView>
                   ))}
                 </ThemedView>

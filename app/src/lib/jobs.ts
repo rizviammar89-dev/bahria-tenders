@@ -111,6 +111,10 @@ export type AwardedJob = {
   precinct: string;
   status: 'awarded' | 'completed';
   resident_id: string;
+  scheduled_date: string | null;
+  scheduled_slot: 'morning' | 'afternoon' | 'evening' | null;
+  schedule_proposed_by: string | null;
+  schedule_confirmed: boolean;
   service: { display_en: string; display_ur: string } | null;
 };
 
@@ -122,7 +126,7 @@ export async function fetchMyAwardedJobs(): Promise<{ jobs: AwardedJob[]; error:
 
   const { data, error } = await supabase
     .from('jobs')
-    .select('id, description, precinct, status, resident_id, service:services(display_en, display_ur)')
+    .select('id, description, precinct, status, resident_id, scheduled_date, scheduled_slot, schedule_proposed_by, schedule_confirmed, service:services(display_en, display_ur)')
     .eq('awarded_provider_id', uid)
     .in('status', ['awarded', 'completed'])
     .order('created_at', { ascending: false });

@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ChatModal, type ChatThread } from '@/components/chat-modal';
 import { LiveMapModal, type LiveMapJob } from '@/components/live-map-modal';
+import { ScheduleCard } from '@/components/schedule-card';
 import { ProviderProfileModal } from '@/components/provider-profile-modal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -22,6 +23,7 @@ import {
   type JobContacts,
   type MyJob,
 } from '@/lib/my-jobs';
+import { useAuth } from '@/lib/auth';
 import { callNumber } from '@/lib/call';
 import { jobPhotoUrl } from '@/lib/job-photos';
 import { fetchVisitingCharge } from '@/lib/jobs';
@@ -47,6 +49,7 @@ export default function MyJobsScreen() {
   const [viewProviderId, setViewProviderId] = useState<string | null>(null); // open a bidder's read-only profile
   const [viewMapJob, setViewMapJob] = useState<LiveMapJob | null>(null); // open the live providers map
   const [chatThread, setChatThread] = useState<ChatThread | null>(null); // open chat with a bidder
+  const myUid = useAuth().session?.user?.id ?? null;
   // Visiting charge per bid, keyed `${jobId}|${providerId}` → { distanceKm, chargePkr }.
   const [charges, setCharges] = useState<Record<string, { distanceKm: number | null; chargePkr: number }>>({});
   const [message, setMessage] = useState<string | null>(null);
@@ -385,6 +388,15 @@ export default function MyJobsScreen() {
                       </ThemedText>
                     </Pressable>
                   )}
+                  <ScheduleCard
+                    jobId={item.id}
+                    myUid={myUid}
+                    scheduledDate={item.scheduled_date}
+                    scheduledSlot={item.scheduled_slot}
+                    proposedBy={item.schedule_proposed_by}
+                    confirmed={item.schedule_confirmed}
+                    onChanged={load}
+                  />
                   {/* Story 2.9: once the work is done (paid offline in cash), the resident closes
                       the job out — which unlocks rating (Story 3.1). */}
                   <Pressable
