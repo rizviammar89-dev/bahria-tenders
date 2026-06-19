@@ -1,9 +1,12 @@
 // Home tab: branded landing (brand mockup). Logo + hero + a role-aware Get Started CTA.
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ProviderProfileModal } from '@/components/provider-profile-modal';
+import { SavedProvidersModal } from '@/components/saved-providers-modal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Brand, BottomTabInset, Spacing } from '@/constants/theme';
@@ -14,6 +17,8 @@ export default function HomeScreen() {
   const router = useRouter();
   const { role } = useAuth();
   const isResident = role === 'resident';
+  const [savedOpen, setSavedOpen] = useState(false);
+  const [viewProviderId, setViewProviderId] = useState<string | null>(null);
 
   return (
     <ThemedView style={styles.container}>
@@ -58,6 +63,16 @@ export default function HomeScreen() {
           </ThemedText>
         </Pressable>
 
+        {isResident && (
+          <Pressable
+            onPress={() => setSavedOpen(true)}
+            style={({ pressed }) => [styles.saved, pressed && styles.pressed]}>
+            <ThemedText type="smallBold" style={styles.savedLabel}>
+              ♥ Saved providers
+            </ThemedText>
+          </Pressable>
+        )}
+
         <Pressable
           onPress={() => supabase.auth.signOut()}
           style={({ pressed }) => [styles.signOut, pressed && styles.pressed]}>
@@ -66,6 +81,20 @@ export default function HomeScreen() {
           </ThemedText>
         </Pressable>
       </SafeAreaView>
+
+      <SavedProvidersModal
+        visible={savedOpen}
+        onClose={() => setSavedOpen(false)}
+        onViewProfile={(id) => {
+          setSavedOpen(false);
+          setViewProviderId(id);
+        }}
+        onRehire={(serviceId) => {
+          setSavedOpen(false);
+          router.navigate({ pathname: '/post-job', params: serviceId ? { serviceId } : {} });
+        }}
+      />
+      <ProviderProfileModal providerId={viewProviderId} onClose={() => setViewProviderId(null)} />
     </ThemedView>
   );
 }
@@ -104,6 +133,16 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
   },
   ctaLabel: { color: '#ffffff', fontSize: 18 },
+  saved: {
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.five,
+    borderRadius: Spacing.four,
+    borderWidth: 1,
+    borderColor: Brand.primary,
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  savedLabel: { color: Brand.primary },
   signOut: { paddingVertical: Spacing.two, paddingHorizontal: Spacing.four },
   pressed: { opacity: 0.7 },
 });

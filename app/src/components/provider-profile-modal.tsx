@@ -9,6 +9,8 @@ import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, View } fro
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Brand, Spacing } from '@/constants/theme';
+import { useAuth } from '@/lib/auth';
+import { addFavorite, fetchFavoriteIds, removeFavorite } from '@/lib/favorites';
 import { fetchServices, type Service } from '@/lib/jobs';
 import {
   fetchProviderProfile,
@@ -26,10 +28,34 @@ export function ProviderProfileModal({
   providerId: string | null;
   onClose: () => void;
 }) {
+  const isResident = useAuth().role === 'resident';
   const [profile, setProfile] = useState<ProviderProfile | null>(null);
   const [reviews, setReviews] = useState<ProviderReview[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isFav, setIsFav] = useState(false);
+  const [favBusy, setFavBusy] = useState(false);
+
+  useEffect(() => {
+    if (!providerId || !isResident) return;
+    let active = true;
+    fetchFavoriteIds().then((ids) => {
+      if (active) setIsFav(ids.has(providerId));
+    });
+    return () => {
+      active = false;
+    };
+  }, [providerId, isResident]);
+
+  async function onToggleFavorite() {
+    if (!providerId || favBusy) return;
+    setFavBusy(true);
+    const next = !isFav;
+    setIsFav(next); // optimistic
+    const { error } = next ? await addFavorite(providerId) : await removeFavorite(providerId);
+    if (error) setIsFav(!next); // revert on failure
+    setFavBusy(false);
+  }
 
   useEffect(() => {
     if (!providerId) return;
@@ -101,6 +127,15 @@ export function ProviderProfileModal({
                       })}
                     </ThemedText>
                   </View>
+                  {isResident && (
+                    <Pressable onPress={onToggleFavorite} disabled={favBusy} hitSlop={8}>
+                      <MaterialCommunityIcons
+                        name={isFav ? 'heart' : 'heart-outline'}
+                        size={28}
+                        color={isFav ? '#c0392b' : Brand.accent}
+                      />
+                    </Pressable>
+                  )}
                 </View>
 
                 {profile.workPhotoPaths.length > 0 && (

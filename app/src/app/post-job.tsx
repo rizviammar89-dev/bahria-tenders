@@ -2,6 +2,7 @@
 // precinct, and posts. Insert goes through the authed client under RLS jobs_insert_own.
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Image } from 'expo-image';
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState, type ComponentProps } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -29,8 +30,10 @@ const TRADE_ICON: Record<string, IconName> = {
 
 export default function PostJobScreen() {
   const theme = useTheme();
+  // Re-hire: Saved providers passes a trade to preselect (Story: favorites).
+  const { serviceId: rehireServiceId } = useLocalSearchParams<{ serviceId?: string }>();
   const [services, setServices] = useState<Service[]>([]);
-  const [serviceId, setServiceId] = useState('');
+  const [serviceId, setServiceId] = useState(rehireServiceId ?? '');
   const [description, setDescription] = useState('');
   const [photos, setPhotos] = useState<PickedPhoto[]>([]);
   const [addressUnit, setAddressUnit] = useState('');
@@ -45,6 +48,12 @@ export default function PostJobScreen() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [posted, setPosted] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  // Re-hire can arrive while this tab is already mounted, so sync the preselected trade on change.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (rehireServiceId) setServiceId(rehireServiceId);
+  }, [rehireServiceId]);
 
   useEffect(() => {
     let cancelled = false;
