@@ -105,6 +105,7 @@ export type AwardedJob = {
   description: string;
   precinct: string;
   status: 'awarded' | 'completed';
+  resident_id: string;
   service: { display_en: string; display_ur: string } | null;
 };
 
@@ -116,7 +117,7 @@ export async function fetchMyAwardedJobs(): Promise<{ jobs: AwardedJob[]; error:
 
   const { data, error } = await supabase
     .from('jobs')
-    .select('id, description, precinct, status, service:services(display_en, display_ur)')
+    .select('id, description, precinct, status, resident_id, service:services(display_en, display_ur)')
     .eq('awarded_provider_id', uid)
     .in('status', ['awarded', 'completed'])
     .order('created_at', { ascending: false });
@@ -128,6 +129,7 @@ export type OpenJob = {
   id: string;
   description: string;
   precinct: string;
+  resident_id: string;
   photo_paths: string[];
   created_at: string;
   service: { display_en: string; display_ur: string } | null;
@@ -157,7 +159,7 @@ export async function fetchOpenJobsForMyTrades(): Promise<{ jobs: OpenJob[]; err
 
   const { data, error } = await supabase
     .from('jobs')
-    .select('id, description, precinct, photo_paths, created_at, service:services(display_en, display_ur), bids(id, price_pkr, note)')
+    .select('id, description, precinct, resident_id, photo_paths, created_at, service:services(display_en, display_ur), bids(id, price_pkr, note)')
     .eq('status', 'open')
     .in('service_id', profile.service_ids as string[])
     .neq('resident_id', uid)

@@ -6,6 +6,7 @@ import { Image } from 'expo-image';
 import { Alert, FlatList, Pressable, RefreshControl, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ChatModal, type ChatThread } from '@/components/chat-modal';
 import { LiveMapModal, type LiveMapJob } from '@/components/live-map-modal';
 import { ProviderProfileModal } from '@/components/provider-profile-modal';
 import { ThemedText } from '@/components/themed-text';
@@ -44,6 +45,7 @@ export default function MyJobsScreen() {
   const [deletingJobId, setDeletingJobId] = useState<string | null>(null); // only this job's delete disables
   const [viewProviderId, setViewProviderId] = useState<string | null>(null); // open a bidder's read-only profile
   const [viewMapJob, setViewMapJob] = useState<LiveMapJob | null>(null); // open the live providers map
+  const [chatThread, setChatThread] = useState<ChatThread | null>(null); // open chat with a bidder
   // Visiting charge per bid, keyed `${jobId}|${providerId}` → { distanceKm, chargePkr }.
   const [charges, setCharges] = useState<Record<string, { distanceKm: number | null; chargePkr: number }>>({});
   const [message, setMessage] = useState<string | null>(null);
@@ -307,13 +309,27 @@ export default function MyJobsScreen() {
                           {bid.note ? ` · ${bid.note}` : ''}
                         </ThemedText>
                         {bid.provider && (
-                          <Pressable
-                            onPress={() => setViewProviderId(bid.provider!.id)}
-                            hitSlop={6}>
-                            <ThemedText type="small" style={styles.providerLink}>
-                              View profile
-                            </ThemedText>
-                          </Pressable>
+                          <View style={styles.bidLinks}>
+                            <Pressable onPress={() => setViewProviderId(bid.provider!.id)} hitSlop={6}>
+                              <ThemedText type="small" style={styles.providerLink}>
+                                View profile
+                              </ThemedText>
+                            </Pressable>
+                            <Pressable
+                              onPress={() =>
+                                setChatThread({
+                                  jobId: item.id,
+                                  providerId: bid.provider!.id,
+                                  otherPartyId: bid.provider!.id,
+                                  title: bid.provider!.full_name,
+                                })
+                              }
+                              hitSlop={6}>
+                              <ThemedText type="small" style={styles.providerLink}>
+                                Chat
+                              </ThemedText>
+                            </Pressable>
+                          </View>
                         )}
                         {(() => {
                           const c = bid.provider && charges[`${item.id}|${bid.provider.id}`];
@@ -461,6 +477,7 @@ export default function MyJobsScreen() {
           onClose={() => setViewProviderId(null)}
         />
         <LiveMapModal job={viewMapJob} onClose={() => setViewMapJob(null)} />
+        <ChatModal thread={chatThread} onClose={() => setChatThread(null)} />
       </SafeAreaView>
     </ThemedView>
   );
@@ -485,6 +502,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.one,
   },
   bidInfo: { flex: 1, gap: Spacing.half },
+  bidLinks: { flexDirection: 'row', gap: Spacing.three },
   providerLink: { color: Brand.primary, textDecorationLine: 'underline' },
   mapButton: {
     paddingVertical: Spacing.two,

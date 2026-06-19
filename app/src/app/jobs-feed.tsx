@@ -6,6 +6,7 @@ import { AppState, FlatList, Pressable, RefreshControl, StyleSheet, View } from 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BidModal } from '@/components/bid-modal';
+import { ChatModal, type ChatThread } from '@/components/chat-modal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Brand, Spacing } from '@/constants/theme';
@@ -18,6 +19,7 @@ import {
 } from '@/lib/availability';
 import { callNumber } from '@/lib/call';
 import { jobPhotoUrl } from '@/lib/job-photos';
+import { useAuth } from '@/lib/auth';
 import { fetchMyAwardedJobs, fetchOpenJobsForMyTrades, type AwardedJob, type OpenJob } from '@/lib/jobs';
 import { getCurrentPosition, requestForegroundPermission } from '@/lib/location';
 import { getJobContacts } from '@/lib/my-jobs';
@@ -38,6 +40,8 @@ export default function JobsFeedScreen() {
   const [confirmation, setConfirmation] = useState<string | null>(null);
   const [available, setAvailable] = useState(false); // Story 6.2: provider availability
   const [availMsg, setAvailMsg] = useState<string | null>(null);
+  const [chatThread, setChatThread] = useState<ChatThread | null>(null);
+  const myUid = useAuth().session?.user?.id ?? null;
   const lastPublishRef = useRef<number | null>(null);
   const mounted = useRef(true);
 
@@ -196,14 +200,32 @@ export default function JobsFeedScreen() {
                         {aj.precinct} · {aj.status === 'completed' ? 'Completed' : 'Awarded to you'}
                       </ThemedText>
                       <ThemedText type="default">{aj.description}</ThemedText>
-                      <Pressable
-                        onPress={() => onCallResident(aj.id)}
-                        disabled={callingJobId !== null}
-                        style={({ pressed }) => [styles.callButton, pressed && styles.pressed]}>
-                        <ThemedText type="default" style={styles.callLabel}>
-                          {callingJobId === aj.id ? 'Connecting…' : '📞 Call resident'}
-                        </ThemedText>
-                      </Pressable>
+                      <View style={styles.awardedActions}>
+                        <Pressable
+                          onPress={() => onCallResident(aj.id)}
+                          disabled={callingJobId !== null}
+                          style={({ pressed }) => [styles.callButton, pressed && styles.pressed]}>
+                          <ThemedText type="default" style={styles.callLabel}>
+                            {callingJobId === aj.id ? 'Connecting…' : '📞 Call'}
+                          </ThemedText>
+                        </Pressable>
+                        {myUid && (
+                          <Pressable
+                            onPress={() =>
+                              setChatThread({
+                                jobId: aj.id,
+                                providerId: myUid,
+                                otherPartyId: aj.resident_id,
+                                title: 'Resident',
+                              })
+                            }
+                            style={({ pressed }) => [styles.chatButton, pressed && styles.pressed]}>
+                            <ThemedText type="default" style={styles.chatLabel}>
+                              💬 Chat
+                            </ThemedText>
+                          </Pressable>
+                        )}
+                      </View>
                     </ThemedView>
                   ))}
                 </ThemedView>
@@ -243,16 +265,34 @@ export default function JobsFeedScreen() {
                   ))}
                 </View>
               )}
-              <Pressable
-                onPress={() => {
-                  setConfirmation(null);
-                  setBidJob(item);
-                }}
-                style={({ pressed }) => [styles.bidButton, pressed && styles.pressed]}>
-                <ThemedText type="default" style={styles.bidButtonLabel}>
-                  {item.myBid ? `Edit bid · Rs ${item.myBid.pricePkr.toLocaleString('en-US')}` : 'Place bid'}
-                </ThemedText>
-              </Pressable>
+              <View style={styles.openActions}>
+                <Pressable
+                  onPress={() => {
+                    setConfirmation(null);
+                    setBidJob(item);
+                  }}
+                  style={({ pressed }) => [styles.bidButton, pressed && styles.pressed]}>
+                  <ThemedText type="default" style={styles.bidButtonLabel}>
+                    {item.myBid ? `Edit bid · Rs ${item.myBid.pricePkr.toLocaleString('en-US')}` : 'Place bid'}
+                  </ThemedText>
+                </Pressable>
+                {item.myBid && myUid && (
+                  <Pressable
+                    onPress={() =>
+                      setChatThread({
+                        jobId: item.id,
+                        providerId: myUid,
+                        otherPartyId: item.resident_id,
+                        title: 'Resident',
+                      })
+                    }
+                    style={({ pressed }) => [styles.chatButton, pressed && styles.pressed]}>
+                    <ThemedText type="default" style={styles.chatLabel}>
+                      💬 Chat
+                    </ThemedText>
+                  </Pressable>
+                )}
+              </View>
             </ThemedView>
           )}
         />
@@ -266,6 +306,7 @@ export default function JobsFeedScreen() {
             load(); // refresh so the card flips to "Edit bid · Rs N"
           }}
         />
+        <ChatModal thread={chatThread} onClose={() => setChatThread(null)} />
       </SafeAreaView>
     </ThemedView>
   );
@@ -299,6 +340,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   callLabel: { color: '#ffffff' },
+  awardedActions: { flexDirection: 'row', gap: Spacing.two, flexWrap: 'wrap' },
+  openActions: { flexDirection: 'row', gap: Spacing.two, flexWrap: 'wrap', alignItems: 'center' },
+  chatButton: {
+    marginTop: Spacing.one,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.four,
+    borderRadius: Spacing.three,
+    borderWidth: 1,
+    borderColor: Brand.primary,
+    alignSelf: 'flex-start',
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  chatLabel: { color: Brand.primary },
   thumbRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   thumb: { width: 72, height: 72, borderRadius: Spacing.two, backgroundColor: '#eee' },
   empty: { padding: Spacing.four, borderRadius: Spacing.three, gap: Spacing.one },
