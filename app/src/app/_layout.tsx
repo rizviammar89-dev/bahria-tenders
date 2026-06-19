@@ -12,6 +12,7 @@ import { useEffect } from 'react';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import AppTabs from '@/components/app-tabs';
 import { LoginScreen } from '@/components/login-screen';
+import { ProfileSetupScreen } from '@/components/profile-setup-screen';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { savePushToken } from '@/lib/push';
 
@@ -28,7 +29,7 @@ Notifications.setNotificationHandler({
 
 // Story 1.4: gate the app behind auth — unauthenticated users see the login screen.
 function Gate() {
-  const { session, loading } = useAuth();
+  const { session, loading, hasProfile } = useAuth();
   // Story 2.5: once signed in, register + persist this device's push token so the broadcast
   // dispatcher can reach it. Non-fatal, re-runs per user (captures a rotated token).
   const uid = session?.user?.id;
@@ -37,6 +38,7 @@ function Gate() {
   }, [uid]);
   if (loading) return null; // splash overlay covers this
   if (!session) return <LoginScreen />;
+  if (hasProfile === false) return <ProfileSetupScreen />; // OTP-verified but no profile yet → set it up
   return <AppTabs />;
 }
 

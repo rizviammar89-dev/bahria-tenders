@@ -1,5 +1,5 @@
-// Self-service signup (open model). Resident or provider; providers pick their trade(s) and are
-// auto-verified so they can bid right away. On success the auth session flips and the app renders.
+// Shown after OTP verification when the user has no profile yet (i.e. they just signed up).
+// Collects name + role + precinct (+ trades for providers); phone already came from the OTP step.
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useEffect, useState, type ComponentProps } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
@@ -10,9 +10,10 @@ import { ThemedView } from '@/components/themed-view';
 import { Brand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
+import { completeProfile } from '@/lib/auth-otp';
 import { fetchServices, type Service } from '@/lib/jobs';
 import type { Role } from '@/lib/role-tabs';
-import { signUpUser } from '@/lib/signup';
+import { supabase } from '@/lib/supabase';
 
 type IconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
 const TRADE_ICON: Record<string, IconName> = {
@@ -24,13 +25,11 @@ const TRADE_ICON: Record<string, IconName> = {
   painter: 'format-paint',
 };
 
-export function SignUpScreen({ onBack }: { onBack: () => void }) {
+export function ProfileSetupScreen() {
   const theme = useTheme();
   const { refreshRole } = useAuth();
   const [role, setRole] = useState<Exclude<Role, null>>('resident');
   const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [pin, setPin] = useState('');
   const [precinct, setPrecinct] = useState('');
   const [services, setServices] = useState<Service[]>([]);
   const [serviceIds, setServiceIds] = useState<string[]>([]);
@@ -55,22 +54,20 @@ export function SignUpScreen({ onBack }: { onBack: () => void }) {
     if (busy) return;
     setBusy(true);
     setError(null);
-    const { error: signUpError } = await signUpUser({ name, phone, pin, role, precinct, serviceIds });
-    if (signUpError) {
-      setError(signUpError);
+    const { error: e } = await completeProfile({ name, role, precinct, serviceIds });
+    if (e) {
+      setError(e);
       setBusy(false);
       return;
     }
-    // Profile is in; make sure the role loads so the right tabs show immediately.
-    refreshRole();
-    // The auth session is now active → the Gate swaps to the app; this screen unmounts.
+    refreshRole(); // hasProfile flips true → the Gate swaps to the app
   }
 
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.scroll}>
-          <ThemedText type="subtitle">Create your account</ThemedText>
+          <ThemedText type="subtitle">Set up your profile</ThemedText>
 
           <ThemedText type="smallBold">I want to…</ThemedText>
           <View style={styles.roleRow}>
@@ -88,7 +85,7 @@ export function SignUpScreen({ onBack }: { onBack: () => void }) {
                     },
                     pressed && styles.pressed,
                   ]}>
-                  <ThemedText type="smallBold" style={selected ? styles.roleLabelSelected : undefined}>
+                  <ThemedText type="smallBold" style={selected ? styles.selectedLabel : undefined}>
                     {r === 'resident' ? 'Hire a tradesman' : 'Offer my services'}
                   </ThemedText>
                 </Pressable>
@@ -98,26 +95,6 @@ export function SignUpScreen({ onBack }: { onBack: () => void }) {
 
           <ThemedText type="smallBold">Full name</ThemedText>
           <TextInput value={name} onChangeText={setName} placeholder="e.g. Ali Khan" style={styles.input} />
-
-          <ThemedText type="smallBold">Phone number</ThemedText>
-          <TextInput
-            value={phone}
-            onChangeText={setPhone}
-            placeholder="0300 1234567"
-            keyboardType="phone-pad"
-            autoComplete="tel"
-            style={styles.input}
-          />
-
-          <ThemedText type="smallBold">Choose a PIN (6+ digits)</ThemedText>
-          <TextInput
-            value={pin}
-            onChangeText={setPin}
-            placeholder="••••••"
-            keyboardType="number-pad"
-            secureTextEntry
-            style={styles.input}
-          />
 
           <ThemedText type="smallBold">Precinct</ThemedText>
           <TextInput
@@ -150,9 +127,7 @@ export function SignUpScreen({ onBack }: { onBack: () => void }) {
                         size={26}
                         color={selected ? '#ffffff' : Brand.accent}
                       />
-                      <ThemedText
-                        type="small"
-                        style={selected ? styles.roleLabelSelected : undefined}>
+                      <ThemedText type="small" style={selected ? styles.selectedLabel : undefined}>
                         {s.display_en}
                       </ThemedText>
                     </Pressable>
@@ -173,13 +148,13 @@ export function SignUpScreen({ onBack }: { onBack: () => void }) {
             disabled={busy}
             style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
             <ThemedText type="default" style={styles.buttonLabel}>
-              {busy ? 'Creating account…' : 'Create account'}
+              {busy ? 'Saving…' : 'Finish'}
             </ThemedText>
           </Pressable>
 
-          <Pressable onPress={onBack} hitSlop={8} style={styles.backLink}>
+          <Pressable onPress={() => supabase.auth.signOut()} hitSlop={8} style={styles.backLink}>
             <ThemedText type="small" style={styles.backLabel}>
-              Already have an account? Log in
+              Use a different number
             </ThemedText>
           </Pressable>
         </ScrollView>
@@ -202,7 +177,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  roleLabelSelected: { color: '#ffffff' },
+  selectedLabel: { color: '#ffffff' },
   input: {
     borderWidth: 1,
     borderColor: '#888',

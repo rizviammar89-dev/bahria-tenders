@@ -6,8 +6,8 @@ import type { Role } from '@/lib/role-tabs';
 export function deriveAuth(input: {
   sessionUserId: string | null;
   sessionLoaded: boolean;
-  roleState: { uid: string | null; role: Role };
-}): { role: Role; loading: boolean } {
+  roleState: { uid: string | null; role: Role; exists: boolean };
+}): { role: Role; loading: boolean; hasProfile: boolean | null } {
   const signedIn = input.sessionUserId != null;
   const roleResolved = signedIn ? input.roleState.uid === input.sessionUserId : true;
   return {
@@ -15,5 +15,8 @@ export function deriveAuth(input: {
     // previous user's stale role after sign-out.
     role: signedIn && roleResolved ? input.roleState.role : null,
     loading: !input.sessionLoaded || !roleResolved,
+    // Whether this signed-in user has a profile row yet. null = not signed in / not resolved.
+    // false routes a freshly-OTP-verified user to profile setup; true → into the app.
+    hasProfile: signedIn && roleResolved ? input.roleState.exists : null,
   };
 }

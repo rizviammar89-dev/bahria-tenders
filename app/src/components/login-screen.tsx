@@ -1,48 +1,43 @@
-// Story 1.4: phone + PIN login. Normalizes the phone, derives the synthetic auth email,
-// and signs in. No self-signup, no OTP (POC: the founder provisions accounts).
+// Phone-OTP login/signup entry. Enter your number → get a one-time code → verify. Same flow for
+// new and returning users; new users are routed to profile setup afterward (no PIN).
 import { Image } from 'expo-image';
 import { useState } from 'react';
 import { Pressable, StyleSheet, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { SignUpScreen } from '@/components/signup-screen';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Brand, Spacing } from '@/constants/theme';
-import { normalizePkPhone, phoneToSyntheticEmail } from '@/lib/phone';
-import { supabase } from '@/lib/supabase';
+import { sendPhoneOtp, verifyPhoneOtp } from '@/lib/auth-otp';
 
 export function LoginScreen() {
-  const [showSignup, setShowSignup] = useState(false);
   const [phone, setPhone] = useState('');
-  const [pin, setPin] = useState('');
+  const [code, setCode] = useState('');
+  const [sent, setSent] = useState(false); // false = entering phone, true = entering the code
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  if (showSignup) return <SignUpScreen onBack={() => setShowSignup(false)} />;
-
-  async function onLogin() {
+  async function onSendCode() {
+    if (busy) return;
     setBusy(true);
     setError(null);
-    const e164 = normalizePkPhone(phone.trim());
-    if (!e164) {
-      setError('Please enter a valid mobile number, like 0300 1234567.');
+    const { error: e } = await sendPhoneOtp(phone);
+    if (e) setError(e);
+    else setSent(true);
+    setBusy(false);
+  }
+
+  async function onVerify() {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    const { error: e } = await verifyPhoneOtp(phone, code);
+    if (e) {
+      setError(e);
       setBusy(false);
       return;
     }
-    if (!pin.trim()) {
-      setError('Please enter your PIN.');
-      setBusy(false);
-      return;
-    }
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: phoneToSyntheticEmail(e164),
-      password: pin,
-    });
-    if (signInError) {
-      setError('Phone or PIN is incorrect.');
-    }
-    // On success, the auth listener flips the session and the app renders.
+    // Success: the auth listener flips the session; the app (or profile setup) renders.
     setBusy(false);
   }
 
@@ -56,49 +51,73 @@ export function LoginScreen() {
           accessibilityLabel="Bahria Tenders"
         />
         <ThemedText type="small" themeColor="textSecondary" style={styles.tagline}>
-          Log in with your phone number and PIN.
+          {sent
+            ? `Enter the code sent to ${phone}.`
+            : 'Enter your phone number to log in or sign up.'}
         </ThemedText>
 
-        <ThemedText type="smallBold">Phone number</ThemedText>
-        <TextInput
-          value={phone}
-          onChangeText={setPhone}
-          placeholder="0300 1234567"
-          keyboardType="phone-pad"
-          autoComplete="tel"
-          style={styles.input}
-        />
-
-        <ThemedText type="smallBold">PIN</ThemedText>
-        <TextInput
-          value={pin}
-          onChangeText={setPin}
-          placeholder="••••"
-          keyboardType="number-pad"
-          secureTextEntry
-          style={styles.input}
-        />
-
-        {error && (
-          <ThemedText type="small" style={styles.error}>
-            {error}
-          </ThemedText>
+        {!sent ? (
+          <>
+            <ThemedText type="smallBold">Phone number</ThemedText>
+            <TextInput
+              value={phone}
+              onChangeText={setPhone}
+              placeholder="0300 1234567"
+              keyboardType="phone-pad"
+              autoComplete="tel"
+              style={styles.input}
+            />
+            {error && (
+              <ThemedText type="small" style={styles.error}>
+                {error}
+              </ThemedText>
+            )}
+            <Pressable
+              onPress={onSendCode}
+              disabled={busy}
+              style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
+              <ThemedText type="default" style={styles.buttonLabel}>
+                {busy ? 'Sending…' : 'Send code'}
+              </ThemedText>
+            </Pressable>
+          </>
+        ) : (
+          <>
+            <ThemedText type="smallBold">Verification code</ThemedText>
+            <TextInput
+              value={code}
+              onChangeText={setCode}
+              placeholder="123456"
+              keyboardType="number-pad"
+              style={styles.input}
+            />
+            {error && (
+              <ThemedText type="small" style={styles.error}>
+                {error}
+              </ThemedText>
+            )}
+            <Pressable
+              onPress={onVerify}
+              disabled={busy}
+              style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
+              <ThemedText type="default" style={styles.buttonLabel}>
+                {busy ? 'Verifying…' : 'Verify & continue'}
+              </ThemedText>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                setSent(false);
+                setCode('');
+                setError(null);
+              }}
+              hitSlop={8}
+              style={styles.backLink}>
+              <ThemedText type="small" style={styles.backLabel}>
+                Use a different number
+              </ThemedText>
+            </Pressable>
+          </>
         )}
-
-        <Pressable
-          onPress={onLogin}
-          disabled={busy}
-          style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
-          <ThemedText type="default" style={styles.buttonLabel}>
-            {busy ? 'Logging in…' : 'Log in'}
-          </ThemedText>
-        </Pressable>
-
-        <Pressable onPress={() => setShowSignup(true)} hitSlop={8} style={styles.signupLink}>
-          <ThemedText type="small" style={styles.signupLabel}>
-            New here? Create an account
-          </ThemedText>
-        </Pressable>
       </SafeAreaView>
     </ThemedView>
   );
@@ -128,7 +147,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   buttonLabel: { color: '#ffffff' },
-  signupLink: { alignItems: 'center', paddingVertical: Spacing.two },
-  signupLabel: { color: Brand.primary, textDecorationLine: 'underline' },
+  backLink: { alignItems: 'center', paddingVertical: Spacing.two },
+  backLabel: { color: Brand.primary, textDecorationLine: 'underline' },
   pressed: { opacity: 0.7 },
 });

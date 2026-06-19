@@ -8,12 +8,19 @@ import { deriveAuth } from '@/lib/auth-state';
 import type { Role } from '@/lib/role-tabs';
 import { supabase } from '@/lib/supabase';
 
-type AuthState = { session: Session | null; role: Role; loading: boolean; refreshRole: () => void };
+type AuthState = {
+  session: Session | null;
+  role: Role;
+  loading: boolean;
+  hasProfile: boolean | null; // false → signed in via OTP but no profile yet → profile setup
+  refreshRole: () => void;
+};
 
 const AuthContext = createContext<AuthState>({
   session: null,
   role: null,
   loading: true,
+  hasProfile: null,
   refreshRole: () => {},
 });
 
@@ -25,9 +32,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [roleNonce, setRoleNonce] = useState(0);
   // Tagged with the uid the role was fetched for, so we can tell whether it's resolved for the
   // CURRENT session without a synchronous setState in an effect body.
-  const [roleState, setRoleState] = useState<{ uid: string | null; role: Role }>({
+  const [roleState, setRoleState] = useState<{ uid: string | null; role: Role; exists: boolean }>({
     uid: null,
     role: null,
+    exists: false,
   });
 
   // Session: getSession on mount + subscribe. The auth callback only does sync setState
@@ -72,10 +80,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let mounted = true;
     (async () => {
       try {
-        const { data } = await supabase.from('profiles').select('role').eq('id', uid).single();
-        if (mounted) setRoleState({ uid, role: (data?.role as Role) ?? null });
+        // maybeSingle: no row (new OTP user without a profile yet) → data null, no throw.
+        const { data } = await supabase.from('profiles').select('role').eq('id', uid).maybeSingle();
+        if (mounted) setRoleState({ uid, role: (data?.role as Role) ?? null, exists: data != null });
       } catch {
-        if (mounted) setRoleState({ uid, role: null }); // degraded: signed in, role unknown → only Home shows
+        if (mounted) setRoleState({ uid, role: null, exists: false }); // degraded: treat as no profile
       }
     })();
     return () => {
@@ -85,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // hourly TOKEN_REFRESHED (new session object, same user). roleNonce forces a re-fetch on demand.
   }, [session?.user?.id, roleNonce]);
 
-  const { role, loading } = deriveAuth({
+  const { role, loading, hasProfile } = deriveAuth({
     sessionUserId: session?.user?.id ?? null,
     sessionLoaded,
     roleState,
@@ -94,7 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshRole = () => setRoleNonce((n) => n + 1);
 
   return (
-    <AuthContext.Provider value={{ session, role, loading, refreshRole }}>
+    <AuthContext.Provider value={{ session, role, loading, hasProfile, refreshRole }}>
       {children}
     </AuthContext.Provider>
   );
