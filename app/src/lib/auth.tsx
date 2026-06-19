@@ -8,13 +8,21 @@ import { deriveAuth } from '@/lib/auth-state';
 import type { Role } from '@/lib/role-tabs';
 import { supabase } from '@/lib/supabase';
 
-type AuthState = { session: Session | null; role: Role; loading: boolean };
+type AuthState = { session: Session | null; role: Role; loading: boolean; refreshRole: () => void };
 
-const AuthContext = createContext<AuthState>({ session: null, role: null, loading: true });
+const AuthContext = createContext<AuthState>({
+  session: null,
+  role: null,
+  loading: true,
+  refreshRole: () => {},
+});
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [sessionLoaded, setSessionLoaded] = useState(false);
+  // Bumped to force a role re-fetch (e.g. right after self-signup inserts the profile, since the
+  // session uid is unchanged so the uid-keyed effect wouldn't otherwise re-run).
+  const [roleNonce, setRoleNonce] = useState(0);
   // Tagged with the uid the role was fetched for, so we can tell whether it's resolved for the
   // CURRENT session without a synchronous setState in an effect body.
   const [roleState, setRoleState] = useState<{ uid: string | null; role: Role }>({
@@ -74,8 +82,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       mounted = false;
     };
     // Depend on the stable uid, not the session object — avoids re-fetching the role on every
-    // hourly TOKEN_REFRESHED (new session object, same user).
-  }, [session?.user?.id]);
+    // hourly TOKEN_REFRESHED (new session object, same user). roleNonce forces a re-fetch on demand.
+  }, [session?.user?.id, roleNonce]);
 
   const { role, loading } = deriveAuth({
     sessionUserId: session?.user?.id ?? null,
@@ -83,7 +91,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     roleState,
   });
 
-  return <AuthContext.Provider value={{ session, role, loading }}>{children}</AuthContext.Provider>;
+  const refreshRole = () => setRoleNonce((n) => n + 1);
+
+  return (
+    <AuthContext.Provider value={{ session, role, loading, refreshRole }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {

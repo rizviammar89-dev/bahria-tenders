@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { SignUpScreen } from '@/components/signup-screen';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Brand, Spacing } from '@/constants/theme';
@@ -12,10 +13,13 @@ import { normalizePkPhone, phoneToSyntheticEmail } from '@/lib/phone';
 import { supabase } from '@/lib/supabase';
 
 export function LoginScreen() {
+  const [showSignup, setShowSignup] = useState(false);
   const [phone, setPhone] = useState('');
   const [pin, setPin] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  if (showSignup) return <SignUpScreen onBack={() => setShowSignup(false)} />;
 
   async function onLogin() {
     setBusy(true);
@@ -89,6 +93,12 @@ export function LoginScreen() {
             {busy ? 'Logging in…' : 'Log in'}
           </ThemedText>
         </Pressable>
+
+        <Pressable onPress={() => setShowSignup(true)} hitSlop={8} style={styles.signupLink}>
+          <ThemedText type="small" style={styles.signupLabel}>
+            New here? Create an account
+          </ThemedText>
+        </Pressable>
       </SafeAreaView>
     </ThemedView>
   );
@@ -118,5 +128,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   buttonLabel: { color: '#ffffff' },
+  signupLink: { alignItems: 'center', paddingVertical: Spacing.two },
+  signupLabel: { color: Brand.primary, textDecorationLine: 'underline' },
   pressed: { opacity: 0.7 },
 });
