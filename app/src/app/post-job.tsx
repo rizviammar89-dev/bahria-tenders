@@ -14,6 +14,7 @@ import { validateJobDraft } from '@/lib/job-draft';
 import { pickJobPhotos, type PickedPhoto } from '@/lib/job-photos';
 import { createJob, fetchMyPrecinct, fetchServices, type Service } from '@/lib/jobs';
 import { getCurrentPosition, requestForegroundPermission, reverseGeocode } from '@/lib/location';
+import { nextDays, type Slot } from '@/lib/schedule';
 
 // Map each trade slug to a Material Community icon for the tile grid.
 type IconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
@@ -35,6 +36,8 @@ export default function PostJobScreen() {
   const [addressUnit, setAddressUnit] = useState('');
   const [addressStreet, setAddressStreet] = useState('');
   const [precinct, setPrecinct] = useState('');
+  const [preferredDate, setPreferredDate] = useState<string | null>(null); // null = ASAP
+  const [preferredSlot, setPreferredSlot] = useState<Slot>(null); // null = anytime
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(false);
   const [locationNote, setLocationNote] = useState<string | null>(null);
@@ -115,6 +118,8 @@ export default function PostJobScreen() {
       lat: coords?.lat,
       lng: coords?.lng,
       photos,
+      preferredDate,
+      preferredSlot,
     });
     if (postError) {
       console.warn('createJob failed:', postError); // keep the real cause for field debugging
@@ -127,6 +132,8 @@ export default function PostJobScreen() {
     setServiceId('');
     setDescription('');
     setPhotos([]);
+    setPreferredDate(null);
+    setPreferredSlot(null);
     setCoords(null);
     setLocationNote(null);
     setBusy(false);
@@ -265,6 +272,57 @@ export default function PostJobScreen() {
             style={styles.input}
           />
 
+          <ThemedText type="smallBold">When do you need it?</ThemedText>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+            {[{ value: null as string | null, label: 'ASAP' }, ...nextDays(new Date(), 10)].map((d) => {
+              const selected = preferredDate === d.value;
+              return (
+                <Pressable
+                  key={d.label}
+                  onPress={() => setPreferredDate(d.value)}
+                  style={({ pressed }) => [
+                    styles.chip,
+                    {
+                      backgroundColor: selected ? Brand.primary : theme.backgroundElement,
+                      borderColor: selected ? Brand.primary : theme.backgroundSelected,
+                    },
+                    pressed && styles.pressed,
+                  ]}>
+                  <ThemedText type="small" style={selected ? styles.chipSelected : undefined}>
+                    {d.label}
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+          <View style={styles.chipRow}>
+            {([
+              { value: null as Slot, label: 'Anytime' },
+              { value: 'morning' as Slot, label: 'Morning' },
+              { value: 'afternoon' as Slot, label: 'Afternoon' },
+              { value: 'evening' as Slot, label: 'Evening' },
+            ]).map((s) => {
+              const selected = preferredSlot === s.value;
+              return (
+                <Pressable
+                  key={s.label}
+                  onPress={() => setPreferredSlot(s.value)}
+                  style={({ pressed }) => [
+                    styles.chip,
+                    {
+                      backgroundColor: selected ? Brand.primary : theme.backgroundElement,
+                      borderColor: selected ? Brand.primary : theme.backgroundSelected,
+                    },
+                    pressed && styles.pressed,
+                  ]}>
+                  <ThemedText type="small" style={selected ? styles.chipSelected : undefined}>
+                    {s.label}
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
+          </View>
+
           {error && (
             <ThemedText type="small" style={styles.error}>
               {error}
@@ -325,6 +383,16 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
   locationLabel: { color: Brand.primary },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two, paddingVertical: Spacing.one },
+  chip: {
+    borderWidth: 1,
+    borderRadius: Spacing.three,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    minHeight: 40,
+    justifyContent: 'center',
+  },
+  chipSelected: { color: '#ffffff' },
   thumbRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   thumbWrap: { position: 'relative' },
   thumb: { width: 72, height: 72, borderRadius: Spacing.two, backgroundColor: '#eee' },

@@ -27,6 +27,7 @@ import { jobPhotoUrl } from '@/lib/job-photos';
 import { fetchVisitingCharge } from '@/lib/jobs';
 import { isValidStars } from '@/lib/rating';
 import { reputationLabel } from '@/lib/reputation';
+import { formatSchedule } from '@/lib/schedule';
 
 const STATUS_LABEL: Record<MyJob['status'], string> = {
   open: 'Open · taking bids',
@@ -254,6 +255,9 @@ export default function MyJobsScreen() {
               </ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
                 {STATUS_LABEL[item.status]}
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                🗓 {formatSchedule(item.preferred_date, item.preferred_slot, new Date())}
               </ThemedText>
               <ThemedText type="default">{item.description}</ThemedText>
 

@@ -23,6 +23,7 @@ import { useAuth } from '@/lib/auth';
 import { fetchMyAwardedJobs, fetchOpenJobsForMyTrades, type AwardedJob, type OpenJob } from '@/lib/jobs';
 import { getCurrentPosition, requestForegroundPermission } from '@/lib/location';
 import { getJobContacts } from '@/lib/my-jobs';
+import { formatSchedule } from '@/lib/schedule';
 import { timeAgo } from '@/lib/time-ago';
 
 const PUBLISH_THROTTLE_MS = 20_000; // Story 6.2: bound battery — publish at most every ~20s
@@ -251,6 +252,9 @@ export default function JobsFeedScreen() {
               </ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
                 {item.precinct} · {timeAgo(item.created_at, now)}
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                🗓 Needed: {formatSchedule(item.preferred_date, item.preferred_slot, now ? new Date(now) : new Date())}
               </ThemedText>
               <ThemedText type="default">{item.description}</ThemedText>
               {item.photo_paths.length > 0 && (

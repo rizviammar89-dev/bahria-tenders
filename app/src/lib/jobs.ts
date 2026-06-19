@@ -37,6 +37,9 @@ export async function createJob(input: {
   lng?: number;
   // Quick-dev: problem photos picked in the UI, uploaded after the row is inserted.
   photos?: PickedPhoto[];
+  // Scheduling: preferred day ('YYYY-MM-DD' or null = ASAP) + time-of-day window.
+  preferredDate?: string | null;
+  preferredSlot?: 'morning' | 'afternoon' | 'evening' | null;
 }): Promise<{ error: string | null }> {
   const { data: userData } = await supabase.auth.getUser();
   const uid = userData.user?.id;
@@ -53,6 +56,8 @@ export async function createJob(input: {
       precinct: input.precinct.trim(),
       lat: input.lat ?? null,
       lng: input.lng ?? null,
+      preferred_date: input.preferredDate ?? null,
+      preferred_slot: input.preferredSlot ?? null,
     })
     .select('id')
     .single();
@@ -130,6 +135,8 @@ export type OpenJob = {
   description: string;
   precinct: string;
   resident_id: string;
+  preferred_date: string | null;
+  preferred_slot: 'morning' | 'afternoon' | 'evening' | null;
   photo_paths: string[];
   created_at: string;
   service: { display_en: string; display_ur: string } | null;
@@ -159,7 +166,7 @@ export async function fetchOpenJobsForMyTrades(): Promise<{ jobs: OpenJob[]; err
 
   const { data, error } = await supabase
     .from('jobs')
-    .select('id, description, precinct, resident_id, photo_paths, created_at, service:services(display_en, display_ur), bids(id, price_pkr, note)')
+    .select('id, description, precinct, resident_id, preferred_date, preferred_slot, photo_paths, created_at, service:services(display_en, display_ur), bids(id, price_pkr, note)')
     .eq('status', 'open')
     .in('service_id', profile.service_ids as string[])
     .neq('resident_id', uid)
