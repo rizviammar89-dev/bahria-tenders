@@ -6,6 +6,7 @@ import { Image } from 'expo-image';
 import { Alert, FlatList, Pressable, RefreshControl, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { LiveMapModal, type LiveMapJob } from '@/components/live-map-modal';
 import { ProviderProfileModal } from '@/components/provider-profile-modal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -22,6 +23,7 @@ import {
 } from '@/lib/my-jobs';
 import { callNumber } from '@/lib/call';
 import { jobPhotoUrl } from '@/lib/job-photos';
+import { fetchVisitingCharge } from '@/lib/jobs';
 import { isValidStars } from '@/lib/rating';
 import { reputationLabel } from '@/lib/reputation';
 
@@ -41,6 +43,9 @@ export default function MyJobsScreen() {
   const [completingJobId, setCompletingJobId] = useState<string | null>(null); // only this job's button disables
   const [deletingJobId, setDeletingJobId] = useState<string | null>(null); // only this job's delete disables
   const [viewProviderId, setViewProviderId] = useState<string | null>(null); // open a bidder's read-only profile
+  const [viewMapJob, setViewMapJob] = useState<LiveMapJob | null>(null); // open the live providers map
+  // Visiting charge per bid, keyed `${jobId}|${providerId}` → { distanceKm, chargePkr }.
+  const [charges, setCharges] = useState<Record<string, { distanceKm: number | null; chargePkr: number }>>({});
   const [message, setMessage] = useState<string | null>(null);
   const [contacts, setContacts] = useState<Record<string, JobContacts>>({});
   const [ratingJobId, setRatingJobId] = useState<string | null>(null); // only this job's submit disables
@@ -54,6 +59,21 @@ export default function MyJobsScreen() {
     setLoadError(error ? "Couldn't load your jobs — pull to refresh." : null);
     if (!error) setJobs(rows);
     setLoaded(true);
+
+    // Story 6.4: visiting charge per bid (open jobs with a GPS location). Uses the canonical
+    // visiting_charge RPC. Non-fatal — a missing location just yields distanceKm null (no charge).
+    if (!error) {
+      const pairs = rows
+        .filter((j) => j.status === 'open' && j.lat != null && j.lng != null)
+        .flatMap((j) => j.bids.filter((b) => b.provider).map((b) => ({ jobId: j.id, providerId: b.provider!.id })));
+      const results = await Promise.all(
+        pairs.map(async (p) => {
+          const { distanceKm, chargePkr } = await fetchVisitingCharge(p.jobId, p.providerId);
+          return [`${p.jobId}|${p.providerId}`, { distanceKm, chargePkr }] as const;
+        }),
+      );
+      if (mounted.current) setCharges(Object.fromEntries(results));
+    }
   }, []);
 
   useEffect(() => {
@@ -248,6 +268,24 @@ export default function MyJobsScreen() {
                 </View>
               )}
 
+              {item.status === 'open' && (
+                <Pressable
+                  onPress={() =>
+                    setViewMapJob({
+                      id: item.id,
+                      lat: item.lat,
+                      lng: item.lng,
+                      serviceId: item.service_id,
+                      serviceName: item.service?.display_en ?? 'Providers',
+                    })
+                  }
+                  style={({ pressed }) => [styles.mapButton, pressed && styles.pressed]}>
+                  <ThemedText type="default" style={styles.mapButtonLabel}>
+                    🗺️ See available providers on map
+                  </ThemedText>
+                </Pressable>
+              )}
+
               {item.status === 'open' &&
                 (item.bids.length === 0 ? (
                   <ThemedText type="small" themeColor="textSecondary">
@@ -277,6 +315,18 @@ export default function MyJobsScreen() {
                             </ThemedText>
                           </Pressable>
                         )}
+                        {(() => {
+                          const c = bid.provider && charges[`${item.id}|${bid.provider.id}`];
+                          if (!c || c.distanceKm == null) return null;
+                          return (
+                            <ThemedText type="small" themeColor="textSecondary">
+                              📍 {c.distanceKm.toFixed(1)} km ·{' '}
+                              {c.chargePkr > 0
+                                ? `Rs ${c.chargePkr} visiting → ~Rs ${(bid.price_pkr + c.chargePkr).toLocaleString('en-US')} total`
+                                : 'no visiting charge'}
+                            </ThemedText>
+                          );
+                        })()}
                       </ThemedView>
                       <Pressable
                         onPress={() =>
@@ -410,6 +460,7 @@ export default function MyJobsScreen() {
           providerId={viewProviderId}
           onClose={() => setViewProviderId(null)}
         />
+        <LiveMapModal job={viewMapJob} onClose={() => setViewMapJob(null)} />
       </SafeAreaView>
     </ThemedView>
   );
@@ -435,6 +486,17 @@ const styles = StyleSheet.create({
   },
   bidInfo: { flex: 1, gap: Spacing.half },
   providerLink: { color: Brand.primary, textDecorationLine: 'underline' },
+  mapButton: {
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.four,
+    borderRadius: Spacing.three,
+    borderWidth: 1,
+    borderColor: Brand.primary,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mapButtonLabel: { color: Brand.primary },
   awardButton: {
     paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.four,

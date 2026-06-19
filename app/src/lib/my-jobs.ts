@@ -20,6 +20,9 @@ export type MyJob = {
   status: 'open' | 'awarded' | 'completed' | 'cancelled';
   created_at: string;
   awarded_provider_id: string | null;
+  service_id: string;
+  lat: number | null;
+  lng: number | null;
   service: { display_en: string; display_ur: string } | null;
   bids: BidWithProvider[];
   rating: { stars: number; review: string | null } | null;
@@ -41,7 +44,7 @@ export async function fetchMyJobs(): Promise<{ jobs: MyJob[]; error: string | nu
   const { data, error } = await supabase
     .from('jobs')
     .select(
-      'id, description, address_unit, address_street, precinct, photo_paths, status, created_at, awarded_provider_id, service:services(display_en, display_ur), bids!bids_job_id_fkey(id, price_pkr, note, provider:profiles(id, full_name, rating_sum, rating_count)), rating:ratings(stars, review)',
+      'id, description, address_unit, address_street, precinct, photo_paths, status, created_at, awarded_provider_id, service_id, lat, lng, service:services(display_en, display_ur), bids!bids_job_id_fkey(id, price_pkr, note, provider:profiles(id, full_name, rating_sum, rating_count)), rating:ratings(stars, review)',
     )
     .eq('resident_id', uid)
     .neq('status', 'cancelled')
