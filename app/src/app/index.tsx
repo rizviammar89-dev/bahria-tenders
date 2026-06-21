@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ModeSwitcher } from '@/components/mode-switcher';
 import { ProviderProfileModal } from '@/components/provider-profile-modal';
 import { SavedProvidersModal } from '@/components/saved-providers-modal';
 import { ThemedText } from '@/components/themed-text';
@@ -40,6 +41,8 @@ export default function HomeScreen() {
             accessibilityElementsHidden
           />
         </View>
+
+        <ModeSwitcher />
 
         <View style={styles.hero}>
           <ThemedText type="title" style={styles.heroTitle}>

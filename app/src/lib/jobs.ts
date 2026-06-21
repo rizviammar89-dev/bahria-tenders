@@ -160,11 +160,11 @@ export async function fetchOpenJobsForMyTrades(): Promise<{ jobs: OpenJob[]; err
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('role, service_ids')
+    .select('is_provider, service_ids')
     .eq('id', uid)
     .single();
   if (profileError || !profile) return { jobs: [], error: profileError?.message ?? null };
-  if (profile.role !== 'provider' || !profile.service_ids?.length) {
+  if (!profile.is_provider || !profile.service_ids?.length) {
     return { jobs: [], error: null };
   }
 

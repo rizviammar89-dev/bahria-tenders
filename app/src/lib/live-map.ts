@@ -24,7 +24,7 @@ export async function fetchAvailableProviders(
   const { data: profs, error: pErr } = await supabase
     .from('profiles')
     .select('id, full_name')
-    .eq('role', 'provider')
+    .eq('is_provider', true)
     .eq('is_available', true)
     .gt('availability_updated_at', cutoff)
     .contains('service_ids', [serviceId]);

@@ -10,7 +10,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Brand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
-import { completeProfile } from '@/lib/auth-otp';
+import { completeProfile } from '@/lib/auth-account';
 import { fetchServices, type Service } from '@/lib/jobs';
 import type { Role } from '@/lib/role-tabs';
 import { supabase } from '@/lib/supabase';
@@ -27,9 +27,10 @@ const TRADE_ICON: Record<string, IconName> = {
 
 export function ProfileSetupScreen() {
   const theme = useTheme();
-  const { refreshRole } = useAuth();
+  const { refreshRole, session } = useAuth();
   const [role, setRole] = useState<Exclude<Role, null>>('resident');
   const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const [precinct, setPrecinct] = useState('');
   const [services, setServices] = useState<Service[]>([]);
   const [serviceIds, setServiceIds] = useState<string[]>([]);
@@ -54,7 +55,14 @@ export function ProfileSetupScreen() {
     if (busy) return;
     setBusy(true);
     setError(null);
-    const { error: e } = await completeProfile({ name, role, precinct, serviceIds });
+    const { error: e } = await completeProfile({
+      userId: session?.user?.id ?? '',
+      name,
+      role,
+      precinct,
+      serviceIds,
+      phone,
+    });
     if (e) {
       setError(e);
       setBusy(false);
@@ -70,6 +78,10 @@ export function ProfileSetupScreen() {
           <ThemedText type="subtitle">Set up your profile</ThemedText>
 
           <ThemedText type="smallBold">I want to…</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            You can do both — switch between hiring and offering services anytime from the home
+            screen.
+          </ThemedText>
           <View style={styles.roleRow}>
             {(['resident', 'provider'] as const).map((r) => {
               const selected = role === r;
@@ -95,6 +107,16 @@ export function ProfileSetupScreen() {
 
           <ThemedText type="smallBold">Full name</ThemedText>
           <TextInput value={name} onChangeText={setName} placeholder="e.g. Ali Khan" style={styles.input} />
+
+          <ThemedText type="smallBold">Phone number</ThemedText>
+          <TextInput
+            value={phone}
+            onChangeText={setPhone}
+            placeholder="0300 1234567"
+            keyboardType="phone-pad"
+            autoComplete="tel"
+            style={styles.input}
+          />
 
           <ThemedText type="smallBold">Precinct</ThemedText>
           <TextInput
@@ -154,7 +176,7 @@ export function ProfileSetupScreen() {
 
           <Pressable onPress={() => supabase.auth.signOut()} hitSlop={8} style={styles.backLink}>
             <ThemedText type="small" style={styles.backLabel}>
-              Use a different number
+              Use a different account
             </ThemedText>
           </Pressable>
         </ScrollView>

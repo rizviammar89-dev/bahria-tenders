@@ -1,43 +1,26 @@
-// Phone-OTP login/signup entry. Enter your number → get a one-time code → verify. Same flow for
-// new and returning users; new users are routed to profile setup afterward (no PIN).
+// Google-only login/signup entry. One tap → Google account picker → session. New users are routed
+// to profile setup afterward. No phone-OTP, no password — logins never cost an SMS.
 import { Image } from 'expo-image';
 import { useState } from 'react';
-import { Pressable, StyleSheet, TextInput } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Brand, Spacing } from '@/constants/theme';
-import { sendPhoneOtp, verifyPhoneOtp } from '@/lib/auth-otp';
+import { signInWithGoogle } from '@/lib/auth-account';
 
 export function LoginScreen() {
-  const [phone, setPhone] = useState('');
-  const [code, setCode] = useState('');
-  const [sent, setSent] = useState(false); // false = entering phone, true = entering the code
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  async function onSendCode() {
+  async function onGoogle() {
     if (busy) return;
     setBusy(true);
     setError(null);
-    const { error: e } = await sendPhoneOtp(phone);
+    const { error: e } = await signInWithGoogle();
     if (e) setError(e);
-    else setSent(true);
-    setBusy(false);
-  }
-
-  async function onVerify() {
-    if (busy) return;
-    setBusy(true);
-    setError(null);
-    const { error: e } = await verifyPhoneOtp(phone, code);
-    if (e) {
-      setError(e);
-      setBusy(false);
-      return;
-    }
-    // Success: the auth listener flips the session; the app (or profile setup) renders.
+    // On success the auth listener flips the session; the app (or profile setup) renders.
     setBusy(false);
   }
 
@@ -51,73 +34,23 @@ export function LoginScreen() {
           accessibilityLabel="Bahria Tenders"
         />
         <ThemedText type="small" themeColor="textSecondary" style={styles.tagline}>
-          {sent
-            ? `Enter the code sent to ${phone}.`
-            : 'Enter your phone number to log in or sign up.'}
+          Continue with Google to log in or sign up.
         </ThemedText>
 
-        {!sent ? (
-          <>
-            <ThemedText type="smallBold">Phone number</ThemedText>
-            <TextInput
-              value={phone}
-              onChangeText={setPhone}
-              placeholder="0300 1234567"
-              keyboardType="phone-pad"
-              autoComplete="tel"
-              style={styles.input}
-            />
-            {error && (
-              <ThemedText type="small" style={styles.error}>
-                {error}
-              </ThemedText>
-            )}
-            <Pressable
-              onPress={onSendCode}
-              disabled={busy}
-              style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
-              <ThemedText type="default" style={styles.buttonLabel}>
-                {busy ? 'Sending…' : 'Send code'}
-              </ThemedText>
-            </Pressable>
-          </>
-        ) : (
-          <>
-            <ThemedText type="smallBold">Verification code</ThemedText>
-            <TextInput
-              value={code}
-              onChangeText={setCode}
-              placeholder="123456"
-              keyboardType="number-pad"
-              style={styles.input}
-            />
-            {error && (
-              <ThemedText type="small" style={styles.error}>
-                {error}
-              </ThemedText>
-            )}
-            <Pressable
-              onPress={onVerify}
-              disabled={busy}
-              style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
-              <ThemedText type="default" style={styles.buttonLabel}>
-                {busy ? 'Verifying…' : 'Verify & continue'}
-              </ThemedText>
-            </Pressable>
-            <Pressable
-              onPress={() => {
-                setSent(false);
-                setCode('');
-                setError(null);
-              }}
-              hitSlop={8}
-              style={styles.backLink}>
-              <ThemedText type="small" style={styles.backLabel}>
-                Use a different number
-              </ThemedText>
-            </Pressable>
-          </>
+        {error && (
+          <ThemedText type="small" style={styles.error}>
+            {error}
+          </ThemedText>
         )}
+
+        <Pressable
+          onPress={onGoogle}
+          disabled={busy}
+          style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
+          <ThemedText type="default" style={styles.buttonLabel}>
+            {busy ? 'Opening Google…' : 'Continue with Google'}
+          </ThemedText>
+        </Pressable>
       </SafeAreaView>
     </ThemedView>
   );
@@ -128,15 +61,7 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, padding: Spacing.four, gap: Spacing.three, justifyContent: 'center' },
   logo: { width: '100%', height: 190, marginBottom: Spacing.two },
   tagline: { textAlign: 'center' },
-  input: {
-    borderWidth: 1,
-    borderColor: '#888',
-    borderRadius: Spacing.two,
-    padding: Spacing.three,
-    fontSize: 18,
-    minHeight: 52,
-  },
-  error: { color: '#c0392b' },
+  error: { color: '#c0392b', textAlign: 'center' },
   button: {
     marginTop: Spacing.two,
     paddingVertical: Spacing.three,
@@ -147,7 +72,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   buttonLabel: { color: '#ffffff' },
-  backLink: { alignItems: 'center', paddingVertical: Spacing.two },
-  backLabel: { color: Brand.primary, textDecorationLine: 'underline' },
   pressed: { opacity: 0.7 },
 });
