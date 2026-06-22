@@ -1,5 +1,6 @@
 // Story 2.3: Provider Job Discovery (FR-7). A verified provider sees open jobs in their
 // trades. RLS jobs_select_visible is the security backstop; the query filters to relevance.
+import { useFocusEffect } from 'expo-router';
 import { Image } from 'expo-image';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
@@ -25,6 +26,7 @@ import { fetchMyAwardedJobs, fetchOpenJobsForMyTrades, type AwardedJob, type Ope
 import { getCurrentPosition, requestForegroundPermission } from '@/lib/location';
 import { getJobContacts } from '@/lib/my-jobs';
 import { formatSchedule } from '@/lib/schedule';
+import { supabase } from '@/lib/supabase';
 import { timeAgo } from '@/lib/time-ago';
 
 const PUBLISH_THROTTLE_MS = 20_000; // Story 6.2: bound battery — publish at most every ~20s
@@ -74,11 +76,30 @@ export default function JobsFeedScreen() {
 
   useEffect(() => {
     mounted.current = true;
-    // Fetch-on-mount: load() only setStates after the await (in a callback), not synchronously.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load();
     return () => {
       mounted.current = false;
+    };
+  }, []);
+
+  // Refetch whenever the Jobs tab regains focus, so switching to it is always current.
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
+
+  // Live updates: a new/changed job streams in via Realtime → refetch so it appears without a manual
+  // pull. RLS on the stream means only visible (open) jobs trigger this. fetchOpenJobsForMyTrades
+  // re-applies the trade/own-job filters, so we just re-run it on any change.
+  useEffect(() => {
+    const channel = supabase
+      .channel('jobs_feed_live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, () => {
+        load();
+      })
+      .subscribe();
+    return () => {
+      channel.unsubscribe();
     };
   }, [load]);
 

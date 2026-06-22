@@ -30,6 +30,7 @@ import { fetchVisitingCharge } from '@/lib/jobs';
 import { isValidStars } from '@/lib/rating';
 import { reputationLabel } from '@/lib/reputation';
 import { formatSchedule } from '@/lib/schedule';
+import { supabase } from '@/lib/supabase';
 
 const STATUS_LABEL: Record<MyJob['status'], string> = {
   open: 'Open · taking bids',
@@ -88,6 +89,23 @@ export default function MyJobsScreen() {
       mounted.current = false;
     };
   }, []);
+
+  // Live updates: a new bid (or job/bid change) streams in via Realtime → refetch so bids appear
+  // without a manual pull. RLS limits the stream to the resident's own jobs' bids.
+  useEffect(() => {
+    const channel = supabase
+      .channel('my_jobs_live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bids' }, () => {
+        load();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, () => {
+        load();
+      })
+      .subscribe();
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [load]);
 
   // Refetch every time the screen comes into focus — i.e. each time the user taps the My Jobs
   // tab (or navigates back to it) — so the list is always current without a manual pull-to-refresh.
