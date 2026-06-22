@@ -173,7 +173,7 @@ export async function fetchOpenJobsForMyTrades(): Promise<{ jobs: OpenJob[]; err
 
   const { data, error } = await supabase
     .from('jobs')
-    .select('id, description, precinct, resident_id, preferred_date, preferred_slot, photo_paths, created_at, service:services(display_en, display_ur), bids(id, price_pkr, note)')
+    .select('id, description, precinct, resident_id, preferred_date, preferred_slot, photo_paths, created_at, service:services(display_en, display_ur), bids!bids_job_id_fkey(id, price_pkr, note)')
     .eq('status', 'open')
     .in('service_id', profile.service_ids as string[])
     .neq('resident_id', uid)
