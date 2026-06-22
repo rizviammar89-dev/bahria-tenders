@@ -25,6 +25,7 @@ export async function fetchAvailableProviders(
     .from('profiles')
     .select('id, full_name')
     .eq('is_provider', true)
+    .gt('provider_access_until', new Date().toISOString()) // hide providers with an expired subscription
     .eq('is_available', true)
     .gt('availability_updated_at', cutoff)
     .contains('service_ids', [serviceId]);

@@ -3,10 +3,13 @@
 // signed in, the role are both resolved — so the tab navigator mounts once with the right tabs.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Session } from '@supabase/supabase-js';
+import { router } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { AppState } from 'react-native';
 
 import { completeSignInFromUrl } from '@/lib/auth-account';
+import { confirmPendingSubscription } from '@/lib/subscription';
 import { deriveAuth } from '@/lib/auth-state';
 import type { Role } from '@/lib/role-tabs';
 import { supabase } from '@/lib/supabase';
@@ -18,14 +21,21 @@ import { supabase } from '@/lib/supabase';
 type Mode = 'resident' | 'provider';
 const MODE_KEY = 'bt.activeMode';
 
+// Module-scope (keeps the time read out of the component's pure render — react-hooks/purity).
+function accessIsCurrent(iso: string | null): boolean {
+  return iso != null && new Date(iso).getTime() > Date.now();
+}
+
 type AuthState = {
   session: Session | null;
   role: Role; // active role (= active mode); null until resolved
-  isProvider: boolean; // capability: can this account act as a provider at all?
+  isProvider: boolean; // capability: is this account a provider at all (regardless of subscription)?
+  providerActive: boolean; // capability AND subscription/trial still current → provider features usable
+  providerAccessUntil: string | null; // ISO timestamp the provider subscription/trial is valid through
   loading: boolean;
   hasProfile: boolean | null; // false → signed in via OTP but no profile yet → profile setup
   refreshRole: () => void;
-  /** Switch the active view. 'provider' is a no-op unless the account isProvider. */
+  /** Switch the active view. 'provider' is a no-op unless providerActive. */
   switchMode: (mode: Mode) => void;
   /** Turn this account into a provider (open model: instant) and switch to provider view. */
   enableProvider: (serviceIds: string[]) => Promise<{ error: string | null }>;
@@ -35,6 +45,8 @@ const AuthContext = createContext<AuthState>({
   session: null,
   role: null,
   isProvider: false,
+  providerActive: false,
+  providerAccessUntil: null,
   loading: true,
   hasProfile: null,
   refreshRole: () => {},
@@ -54,11 +66,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     uid: string | null;
     role: Role;
     isProvider: boolean;
+    providerAccessUntil: string | null;
     exists: boolean;
   }>({
     uid: null,
     role: null,
     isProvider: false,
+    providerAccessUntil: null,
     exists: false,
   });
   // Active-view preference, loaded from storage. null = not loaded yet → fall back to a sensible
@@ -78,10 +92,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     Linking.getInitialURL().then((url) => {
       if (url) completeSignInFromUrl(url).catch(() => {});
     });
+    // Re-fetch role/access whenever the app returns to the foreground — e.g. coming back from the
+    // Safepay checkout browser, so an extended subscription unlocks provider mode without a reload.
+    const appStateSub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') setRoleNonce((n) => n + 1);
+    });
     const sub = Linking.addEventListener('url', ({ url }) => {
+      if (url.includes('subscription-callback')) {
+        // Returning from Safepay checkout via deep link — confirm the payment, refresh access, and
+        // clear the deep-linked route so expo-router doesn't show an unmatched page.
+        confirmPendingSubscription(url)
+          .catch(() => {})
+          .finally(() => setRoleNonce((n) => n + 1));
+        try {
+          router.replace('/');
+        } catch {
+          /* router may not be ready */
+        }
+        return;
+      }
       completeSignInFromUrl(url).catch(() => {});
     });
-    return () => sub.remove();
+    return () => {
+      appStateSub.remove();
+      sub.remove();
+    };
   }, []);
 
   // Session: getSession on mount + subscribe. The auth callback only does sync setState
@@ -129,7 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // maybeSingle: no row (new OTP user without a profile yet) → data null, no throw.
         const { data } = await supabase
           .from('profiles')
-          .select('role, is_provider')
+          .select('role, is_provider, provider_access_until')
           .eq('id', uid)
           .maybeSingle();
         if (mounted)
@@ -137,10 +172,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             uid,
             role: (data?.role as Role) ?? null,
             isProvider: data?.is_provider === true,
+            providerAccessUntil: (data?.provider_access_until as string | null) ?? null,
             exists: data != null,
           });
       } catch {
-        if (mounted) setRoleState({ uid, role: null, isProvider: false, exists: false }); // degraded: treat as no profile
+        if (mounted)
+          setRoleState({ uid, role: null, isProvider: false, providerAccessUntil: null, exists: false }); // degraded
       }
     })();
     return () => {
@@ -159,17 +196,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Capability + active role. Only meaningful once resolved for this session with a profile.
   const resolved = !loading && hasProfile === true;
   const isProvider = resolved && roleState.isProvider;
-  // Everyone can be a resident; a provider account defaults to provider view (mode ?? 'provider').
+  const providerAccessUntil = resolved ? roleState.providerAccessUntil : null;
+  // providerActive = is a provider AND the trial/subscription window is still open. Expired providers
+  // keep the capability (so we can show the renew prompt) but can't act as a provider.
+  const providerActive = isProvider && accessIsCurrent(providerAccessUntil);
+  // Everyone can be a resident; an active provider defaults to provider view (mode ?? 'provider').
+  // An expired provider is forced back to resident view until they renew.
   const role: Role = !resolved
     ? declaredRole
-    : isProvider && (mode ?? 'provider') === 'provider'
+    : providerActive && (mode ?? 'provider') === 'provider'
       ? 'provider'
       : 'resident';
 
   const refreshRole = () => setRoleNonce((n) => n + 1);
 
   const switchMode = (next: Mode) => {
-    if (next === 'provider' && !isProvider) return; // can't enter provider view without the capability
+    if (next === 'provider' && !providerActive) return; // can't enter provider view without active access
     setMode(next);
     AsyncStorage.setItem(MODE_KEY, next).catch(() => {});
   };
@@ -193,7 +235,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, role, isProvider, loading, hasProfile, refreshRole, switchMode, enableProvider }}>
+      value={{
+        session,
+        role,
+        isProvider,
+        providerActive,
+        providerAccessUntil,
+        loading,
+        hasProfile,
+        refreshRole,
+        switchMode,
+        enableProvider,
+      }}>
       {children}
     </AuthContext.Provider>
   );

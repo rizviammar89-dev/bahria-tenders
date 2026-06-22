@@ -160,12 +160,15 @@ export async function fetchOpenJobsForMyTrades(): Promise<{ jobs: OpenJob[]; err
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('is_provider, service_ids')
+    .select('is_provider, provider_access_until, service_ids')
     .eq('id', uid)
     .single();
   if (profileError || !profile) return { jobs: [], error: profileError?.message ?? null };
-  if (!profile.is_provider || !profile.service_ids?.length) {
-    return { jobs: [], error: null };
+  const accessCurrent =
+    profile.provider_access_until != null &&
+    new Date(profile.provider_access_until as string).getTime() > Date.now();
+  if (!profile.is_provider || !accessCurrent || !profile.service_ids?.length) {
+    return { jobs: [], error: null }; // not a provider, expired subscription, or no trades → empty feed
   }
 
   const { data, error } = await supabase

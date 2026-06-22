@@ -1,9 +1,9 @@
-// Dual-role: lets one account flip between hiring (resident view) and working (provider view).
-// Provider accounts get a two-way segmented toggle; resident-only accounts get a "Offer my
-// services" button that, on first use, collects trades and enables provider mode (open model:
-// instant — see set_provider_trust_on_enable in 20260620120000_dual_role.sql).
+// Dual-role + subscription control on the home screen. Three states:
+//  1. Active provider (trial/subscription current) → Hire ⇄ Work toggle + access countdown.
+//  2. Expired provider → renew paywall (Rs 2500/month). Provider features are locked until they pay.
+//  3. Not a provider → "Offer my services" → pick trades → start the 2-month free trial.
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -11,34 +11,63 @@ import { Brand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
 import { fetchServices, type Service } from '@/lib/jobs';
+import { startSubscriptionCheckout, SUBSCRIPTION_PKR } from '@/lib/subscription';
+
+function daysUntil(iso: string | null): number | null {
+  if (!iso) return null;
+  return Math.ceil((new Date(iso).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+}
 
 export function ModeSwitcher() {
   const theme = useTheme();
-  const { role, isProvider, switchMode, enableProvider } = useAuth();
+  const { role, isProvider, providerActive, providerAccessUntil, switchMode, enableProvider } =
+    useAuth();
   const [setupOpen, setSetupOpen] = useState(false);
+  const [paywallOpen, setPaywallOpen] = useState(false);
 
+  // Provider (active OR expired) → show the Hire/Work toggle. Tapping Work switches if access is
+  // current; if expired, it opens the paywall instead of switching.
   if (isProvider) {
+    const days = daysUntil(providerAccessUntil);
+    const onWork = () => (providerActive ? switchMode('provider') : setPaywallOpen(true));
     return (
-      <View style={[styles.segment, { borderColor: Brand.primary }]}>
-        {(['resident', 'provider'] as const).map((m) => {
-          const selected = role === m;
-          return (
-            <Pressable
-              key={m}
-              onPress={() => switchMode(m)}
-              style={[styles.segmentItem, selected && { backgroundColor: Brand.primary }]}>
-              <ThemedText
-                type="smallBold"
-                style={selected ? styles.segmentSelected : { color: Brand.primary }}>
-                {m === 'resident' ? 'Hire' : 'Work'}
+      <View style={styles.wrap}>
+        <View style={[styles.segment, { borderColor: Brand.primary }]}>
+          <Pressable
+            onPress={() => switchMode('resident')}
+            style={[styles.segmentItem, role === 'resident' && { backgroundColor: Brand.primary }]}>
+            <ThemedText
+              type="smallBold"
+              style={role === 'resident' ? styles.segmentSelected : { color: Brand.primary }}>
+              Hire
+            </ThemedText>
+          </Pressable>
+          <Pressable
+            onPress={onWork}
+            style={[styles.segmentItem, role === 'provider' && { backgroundColor: Brand.primary }]}>
+            <ThemedText
+              type="smallBold"
+              style={role === 'provider' ? styles.segmentSelected : { color: Brand.primary }}>
+              Work
+            </ThemedText>
+          </Pressable>
+        </View>
+        {providerActive && days != null && days <= 14 && (
+          <Pressable onPress={() => setPaywallOpen(true)}>
+            <ThemedText type="small" themeColor="textSecondary" style={styles.countdown}>
+              Provider access ends in {days} day{days === 1 ? '' : 's'} ·{' '}
+              <ThemedText type="smallBold" style={{ color: Brand.primary }}>
+                Renew
               </ThemedText>
-            </Pressable>
-          );
-        })}
+            </ThemedText>
+          </Pressable>
+        )}
+        <PaywallModal visible={paywallOpen} onClose={() => setPaywallOpen(false)} />
       </View>
     );
   }
 
+  // Not a provider → offer to become one (starts the free trial).
   return (
     <>
       <Pressable
@@ -59,6 +88,56 @@ export function ModeSwitcher() {
         theme={theme}
       />
     </>
+  );
+}
+
+function PaywallModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const { refreshRole } = useAuth();
+  const [busy, setBusy] = useState(false);
+
+  async function onPay() {
+    if (busy) return;
+    setBusy(true);
+    const { error } = await startSubscriptionCheckout();
+    setBusy(false);
+    if (error) {
+      Alert.alert('Payment', error);
+      return;
+    }
+    // The webhook extends access asynchronously — refresh now and again shortly after so the UI
+    // reflects the new access once Safepay's webhook lands.
+    refreshRole();
+    setTimeout(refreshRole, 4000);
+    onClose();
+  }
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.centerBackdrop}>
+        <ThemedView style={styles.card}>
+          <ThemedText type="subtitle" style={styles.cardTitle}>
+            Provider subscription
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary" style={styles.cardBody}>
+            Your free trial is over. Pay Rs {SUBSCRIPTION_PKR}/month to keep working — bidding on jobs,
+            getting job alerts, and appearing on the map. You can still hire anytime.
+          </ThemedText>
+          <Pressable
+            onPress={onPay}
+            disabled={busy}
+            style={({ pressed }) => [styles.payButton, pressed && styles.pressed]}>
+            <ThemedText type="default" style={styles.payLabel}>
+              {busy ? 'Opening…' : `Pay Rs ${SUBSCRIPTION_PKR} / month`}
+            </ThemedText>
+          </Pressable>
+          <Pressable onPress={onClose} hitSlop={8} style={styles.cardClose}>
+            <ThemedText type="smallBold" style={{ color: Brand.primary }}>
+              Not now
+            </ThemedText>
+          </Pressable>
+        </ThemedView>
+      </View>
+    </Modal>
   );
 }
 
@@ -119,8 +198,8 @@ function BecomeProviderModal({
             </Pressable>
           </View>
           <ThemedText type="small" themeColor="textSecondary">
-            Pick the trade(s) you work in. You can switch between hiring and working anytime — your
-            account keeps both.
+            Pick the trade(s) you work in. You get a 2-month free trial, then Rs {SUBSCRIPTION_PKR}/month.
+            You can switch between hiring and working anytime — your account keeps both.
           </ThemedText>
 
           <ScrollView contentContainerStyle={styles.grid}>
@@ -155,7 +234,7 @@ function BecomeProviderModal({
             disabled={busy}
             style={({ pressed }) => [styles.confirm, pressed && styles.pressed]}>
             <ThemedText type="default" style={styles.confirmLabel}>
-              {busy ? 'Enabling…' : 'Start offering services'}
+              {busy ? 'Enabling…' : 'Start free trial'}
             </ThemedText>
           </Pressable>
         </ThemedView>
@@ -165,6 +244,7 @@ function BecomeProviderModal({
 }
 
 const styles = StyleSheet.create({
+  wrap: { alignItems: 'center', gap: Spacing.one },
   segment: {
     flexDirection: 'row',
     borderWidth: 1,
@@ -179,6 +259,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   segmentSelected: { color: '#ffffff' },
+  countdown: { textAlign: 'center' },
   offerButton: {
     borderWidth: 1,
     borderRadius: Spacing.four,
@@ -188,6 +269,38 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignSelf: 'center',
   },
+  paywall: {
+    alignSelf: 'stretch',
+    padding: Spacing.three,
+    borderRadius: Spacing.three,
+    gap: Spacing.two,
+  },
+  payButton: {
+    backgroundColor: Brand.primary,
+    paddingVertical: Spacing.three,
+    borderRadius: Spacing.three,
+    alignItems: 'center',
+    minHeight: 48,
+    justifyContent: 'center',
+  },
+  payLabel: { color: '#ffffff' },
+  centerBackdrop: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.four,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  card: {
+    width: '100%',
+    maxWidth: 420,
+    borderRadius: Spacing.four,
+    padding: Spacing.four,
+    gap: Spacing.three,
+  },
+  cardTitle: { textAlign: 'center' },
+  cardBody: { textAlign: 'center', lineHeight: 22 },
+  cardClose: { alignItems: 'center', paddingVertical: Spacing.two },
   backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
   sheet: {
     maxHeight: '80%',
