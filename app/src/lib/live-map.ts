@@ -78,6 +78,13 @@ export async function fetchProvidersForTrade(
   return { providers, error: null };
 }
 
+/** A provider's phone for a direct call from Hunt (server-gated to provider accounts). */
+export async function fetchProviderPhone(providerId: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc('get_provider_phone', { p_provider_id: providerId });
+  if (error) return null;
+  return (data as string | null) ?? null;
+}
+
 /** Subscribe to any provider_locations change; caller refetches in `onChange` and unsubscribes. */
 export function subscribeProviderLocations(onChange: () => void): RealtimeChannel {
   return supabase

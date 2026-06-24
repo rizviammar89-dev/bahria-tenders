@@ -1,7 +1,7 @@
 // Hunt: a resident-facing map of providers, filterable by trade. Shows every provider in the
 // selected trade that has a published location; tapping a pin opens their profile to view & hire.
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Marker, type Region } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -11,8 +11,9 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Brand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { callNumber } from '@/lib/call';
 import { fetchServices, type Service } from '@/lib/jobs';
-import { fetchProvidersForTrade, type AvailableProvider } from '@/lib/live-map';
+import { fetchProvidersForTrade, fetchProviderPhone, type AvailableProvider } from '@/lib/live-map';
 import { getCurrentPosition, requestForegroundPermission } from '@/lib/location';
 
 // Bahria Town Karachi-ish fallback if the resident's location isn't available.
@@ -31,6 +32,17 @@ export default function HuntScreen() {
   const [region, setRegion] = useState<Region | null>(null);
   const [loading, setLoading] = useState(false);
   const [viewProviderId, setViewProviderId] = useState<string | null>(null);
+  const [selected, setSelected] = useState<AvailableProvider | null>(null); // pin tapped → action card
+  const [calling, setCalling] = useState(false);
+
+  async function onCall(providerId: string) {
+    if (calling) return;
+    setCalling(true);
+    const phone = await fetchProviderPhone(providerId);
+    setCalling(false);
+    if (phone) callNumber(phone);
+    else Alert.alert('Call', "Couldn't get this provider's number — please try again.");
+  }
 
   // Center the map on the resident's location if permitted, else the default region.
   useEffect(() => {
@@ -119,7 +131,7 @@ export default function HuntScreen() {
                   key={p.id}
                   coordinate={{ latitude: p.lat, longitude: p.lng }}
                   title={p.fullName}
-                  onPress={() => setViewProviderId(p.id)}
+                  onPress={() => setSelected(p)}
                 />
               ))}
             </AppMap>
@@ -130,13 +142,43 @@ export default function HuntScreen() {
           )}
         </View>
 
-        <ThemedText type="small" themeColor="textSecondary" style={styles.footer}>
-          {loading
-            ? 'Loading providers…'
-            : providers.length === 0
-              ? 'No providers with a location in this trade yet.'
-              : `${providers.length} provider${providers.length === 1 ? '' : 's'} — tap a pin to view & hire`}
-        </ThemedText>
+        {selected ? (
+          <ThemedView type="backgroundElement" style={styles.actionCard}>
+            <View style={styles.actionHeader}>
+              <ThemedText type="smallBold">{selected.fullName}</ThemedText>
+              <Pressable onPress={() => setSelected(null)} hitSlop={8}>
+                <ThemedText type="smallBold" style={{ color: Brand.primary }}>
+                  ✕
+                </ThemedText>
+              </Pressable>
+            </View>
+            <View style={styles.actionRow}>
+              <Pressable
+                onPress={() => onCall(selected.id)}
+                disabled={calling}
+                style={({ pressed }) => [styles.callButton, pressed && styles.pressed]}>
+                <ThemedText type="default" style={styles.callLabel}>
+                  {calling ? 'Connecting…' : '📞 Call'}
+                </ThemedText>
+              </Pressable>
+              <Pressable
+                onPress={() => setViewProviderId(selected.id)}
+                style={({ pressed }) => [styles.profileButton, pressed && styles.pressed]}>
+                <ThemedText type="default" style={styles.profileLabel}>
+                  View profile
+                </ThemedText>
+              </Pressable>
+            </View>
+          </ThemedView>
+        ) : (
+          <ThemedText type="small" themeColor="textSecondary" style={styles.footer}>
+            {loading
+              ? 'Loading providers…'
+              : providers.length === 0
+                ? 'No providers with a location in this trade yet.'
+                : `${providers.length} provider${providers.length === 1 ? '' : 's'} — tap a pin to call or view`}
+          </ThemedText>
+        )}
       </SafeAreaView>
 
       <ProviderProfileModal providerId={viewProviderId} onClose={() => setViewProviderId(null)} />
@@ -162,4 +204,34 @@ const styles = StyleSheet.create({
   map: { flex: 1, width: '100%', height: '100%' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   footer: { textAlign: 'center', padding: Spacing.three },
+  actionCard: {
+    margin: Spacing.four,
+    padding: Spacing.three,
+    borderRadius: Spacing.three,
+    gap: Spacing.two,
+  },
+  actionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  actionRow: { flexDirection: 'row', gap: Spacing.two },
+  callButton: {
+    flex: 1,
+    paddingVertical: Spacing.three,
+    borderRadius: Spacing.three,
+    backgroundColor: '#1B9E5A',
+    alignItems: 'center',
+    minHeight: 48,
+    justifyContent: 'center',
+  },
+  callLabel: { color: '#ffffff' },
+  profileButton: {
+    flex: 1,
+    paddingVertical: Spacing.three,
+    borderRadius: Spacing.three,
+    borderWidth: 1,
+    borderColor: Brand.primary,
+    alignItems: 'center',
+    minHeight: 48,
+    justifyContent: 'center',
+  },
+  profileLabel: { color: Brand.primary },
+  pressed: { opacity: 0.7 },
 });
