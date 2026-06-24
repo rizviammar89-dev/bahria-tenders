@@ -10,7 +10,7 @@ export default function AppTabs() {
   // Role is resolved before this mounts (AuthProvider gates `loading`), so the tab set is
   // correct at first mount — no remount/flash. Conditional render, not the `hidden` prop
   // (which is not respected on Android — expo/expo#41781).
-  const { postJob, myJobs, jobs, profile } = roleTabs(useAuth().role);
+  const { postJob, myJobs, hunt, jobs, profile } = roleTabs(useAuth().role);
 
   return (
     <NativeTabs
@@ -40,6 +40,16 @@ export default function AppTabs() {
         <NativeTabs.Trigger name="my-jobs">
           <NativeTabs.Trigger.Label>My Jobs</NativeTabs.Trigger.Label>
           {/* Story 2.8: placeholder icon (reuses explore.png) until a dedicated asset exists. */}
+          <NativeTabs.Trigger.Icon
+            src={require('@/assets/images/tabIcons/explore.png')}
+            renderingMode="template"
+          />
+        </NativeTabs.Trigger>
+      )}
+
+      {hunt && (
+        <NativeTabs.Trigger name="hunt">
+          <NativeTabs.Trigger.Label>Hunt</NativeTabs.Trigger.Label>
           <NativeTabs.Trigger.Icon
             src={require('@/assets/images/tabIcons/explore.png')}
             renderingMode="template"

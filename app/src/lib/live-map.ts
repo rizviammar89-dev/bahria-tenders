@@ -48,6 +48,36 @@ export async function fetchAvailableProviders(
   return { providers, error: null };
 }
 
+/** Hunt page: ALL providers offering `serviceId` (with active access) that have a published location,
+ *  regardless of whether they're currently online/available. */
+export async function fetchProvidersForTrade(
+  serviceId: string,
+): Promise<{ providers: AvailableProvider[]; error: string | null }> {
+  const { data: profs, error: pErr } = await supabase
+    .from('profiles')
+    .select('id, full_name')
+    .eq('is_provider', true)
+    .gt('provider_access_until', new Date().toISOString())
+    .contains('service_ids', [serviceId]);
+  if (pErr) return { providers: [], error: pErr.message };
+  const names = new Map((profs ?? []).map((p) => [p.id as string, p.full_name as string]));
+  if (names.size === 0) return { providers: [], error: null };
+
+  const { data: locs, error: lErr } = await supabase
+    .from('provider_locations')
+    .select('provider_id, lat, lng')
+    .in('provider_id', [...names.keys()]);
+  if (lErr) return { providers: [], error: lErr.message };
+
+  const providers = (locs ?? []).map((l) => ({
+    id: l.provider_id as string,
+    fullName: names.get(l.provider_id as string) ?? 'Provider',
+    lat: l.lat as number,
+    lng: l.lng as number,
+  }));
+  return { providers, error: null };
+}
+
 /** Subscribe to any provider_locations change; caller refetches in `onChange` and unsubscribes. */
 export function subscribeProviderLocations(onChange: () => void): RealtimeChannel {
   return supabase
