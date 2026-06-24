@@ -13,6 +13,9 @@ export function ThemedText({ style, type = 'default', themeColor, ...rest }: The
 
   return (
     <Text
+      // Cap how much a phone's OS "font size" setting can enlarge text, so the app stays visually
+      // consistent across devices (it still allows modest accessibility scaling). Overridable per-use.
+      maxFontSizeMultiplier={1.2}
       style={[
         { color: theme[themeColor ?? 'text'] },
         type === 'default' && styles.default,
