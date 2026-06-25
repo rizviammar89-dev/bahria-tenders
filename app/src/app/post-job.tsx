@@ -11,6 +11,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Brand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useAuth } from '@/lib/auth';
 import { validateJobDraft } from '@/lib/job-draft';
 import { pickJobPhotos, type PickedPhoto } from '@/lib/job-photos';
 import { createJob, fetchMyPrecinct, fetchServices, type Service } from '@/lib/jobs';
@@ -30,6 +31,7 @@ const TRADE_ICON: Record<string, IconName> = {
 
 export default function PostJobScreen() {
   const theme = useTheme();
+  const myUid = useAuth().session?.user?.id ?? null;
   // Re-hire: Saved providers passes a trade to preselect (Story: favorites).
   const { serviceId: rehireServiceId } = useLocalSearchParams<{ serviceId?: string }>();
   const [services, setServices] = useState<Service[]>([]);
@@ -124,6 +126,7 @@ export default function PostJobScreen() {
     }
     const { error: postError } = await createJob({
       ...draft,
+      userId: myUid ?? '',
       lat: coords?.lat,
       lng: coords?.lng,
       photos,
@@ -209,6 +212,8 @@ export default function PostJobScreen() {
             onChangeText={setDescription}
             placeholder="e.g. Kitchen tap is leaking"
             multiline
+            returnKeyType="done"
+            submitBehavior="blurAndSubmit"
             style={[styles.input, styles.multiline]}
           />
 
@@ -262,6 +267,7 @@ export default function PostJobScreen() {
             value={addressUnit}
             onChangeText={setAddressUnit}
             placeholder="e.g. Villa 123 / Apartment 4B"
+            returnKeyType="done"
             style={styles.input}
           />
 
@@ -270,6 +276,7 @@ export default function PostJobScreen() {
             value={addressStreet}
             onChangeText={setAddressStreet}
             placeholder="e.g. Rose Street 12 / Sapphire Tower"
+            returnKeyType="done"
             style={styles.input}
           />
 
@@ -278,12 +285,13 @@ export default function PostJobScreen() {
             value={precinct}
             onChangeText={setPrecinct}
             placeholder="e.g. Precinct 10"
+            returnKeyType="done"
             style={styles.input}
           />
 
           <ThemedText type="smallBold">When do you need it?</ThemedText>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-            {[{ value: null as string | null, label: 'ASAP' }, ...nextDays(new Date(), 10)].map((d) => {
+          <View style={styles.chipRow}>
+            {[{ value: null as string | null, label: 'ASAP' }, ...nextDays(new Date(), 4)].map((d) => {
               const selected = preferredDate === d.value;
               return (
                 <Pressable
@@ -303,7 +311,7 @@ export default function PostJobScreen() {
                 </Pressable>
               );
             })}
-          </ScrollView>
+          </View>
           <View style={styles.chipRow}>
             {([
               { value: null as Slot, label: 'Anytime' },

@@ -27,6 +27,7 @@ export async function fetchMyPrecinct(): Promise<string | null> {
 
 /** Inserts a job for the signed-in resident. status defaults to 'open' in the DB. */
 export async function createJob(input: {
+  userId: string; // from the caller's live session — avoids supabase.auth.getUser() (RN auth-lock deadlock)
   serviceId: string;
   description: string;
   addressUnit: string; // Villa / Apartment number
@@ -41,8 +42,7 @@ export async function createJob(input: {
   preferredDate?: string | null;
   preferredSlot?: 'morning' | 'afternoon' | 'evening' | null;
 }): Promise<{ error: string | null }> {
-  const { data: userData } = await supabase.auth.getUser();
-  const uid = userData.user?.id;
+  const uid = input.userId;
   if (!uid) return { error: 'You are not signed in.' };
 
   const { data, error } = await supabase
