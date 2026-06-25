@@ -7,7 +7,6 @@ import { Alert, FlatList, Pressable, RefreshControl, StyleSheet, TextInput, View
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ChatModal, type ChatThread } from '@/components/chat-modal';
-import { LiveMapModal, type LiveMapJob } from '@/components/live-map-modal';
 import { ScheduleCard } from '@/components/schedule-card';
 import { ProviderProfileModal } from '@/components/provider-profile-modal';
 import { ThemedText } from '@/components/themed-text';
@@ -48,7 +47,6 @@ export default function MyJobsScreen() {
   const [completingJobId, setCompletingJobId] = useState<string | null>(null); // only this job's button disables
   const [deletingJobId, setDeletingJobId] = useState<string | null>(null); // only this job's delete disables
   const [viewProviderId, setViewProviderId] = useState<string | null>(null); // open a bidder's read-only profile
-  const [viewMapJob, setViewMapJob] = useState<LiveMapJob | null>(null); // open the live providers map
   const [chatThread, setChatThread] = useState<ChatThread | null>(null); // open chat with a bidder
   const myUid = useAuth().session?.user?.id ?? null;
   // Visiting charge per bid, keyed `${jobId}|${providerId}` → { distanceKm, chargePkr }.
@@ -295,23 +293,6 @@ export default function MyJobsScreen() {
                 </View>
               )}
 
-              {item.status === 'open' && (
-                <Pressable
-                  onPress={() =>
-                    setViewMapJob({
-                      id: item.id,
-                      lat: item.lat,
-                      lng: item.lng,
-                      serviceId: item.service_id,
-                      serviceName: item.service?.display_en ?? 'Providers',
-                    })
-                  }
-                  style={({ pressed }) => [styles.mapButton, pressed && styles.pressed]}>
-                  <ThemedText type="default" style={styles.mapButtonLabel}>
-                    🗺️ See available providers on map
-                  </ThemedText>
-                </Pressable>
-              )}
 
               {item.status === 'open' &&
                 (item.bids.length === 0 ? (
@@ -510,7 +491,6 @@ export default function MyJobsScreen() {
           providerId={viewProviderId}
           onClose={() => setViewProviderId(null)}
         />
-        <LiveMapModal job={viewMapJob} onClose={() => setViewMapJob(null)} />
         <ChatModal thread={chatThread} onClose={() => setChatThread(null)} />
       </SafeAreaView>
     </ThemedView>
