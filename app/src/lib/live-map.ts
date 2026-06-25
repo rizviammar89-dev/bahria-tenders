@@ -57,6 +57,7 @@ export async function fetchProvidersForTrade(
     .from('profiles')
     .select('id, full_name')
     .eq('is_provider', true)
+    .eq('in_hire_mode', false) // hidden while the provider is in Hire mode
     .gt('provider_access_until', new Date().toISOString())
     .contains('service_ids', [serviceId]);
   if (pErr) return { providers: [], error: pErr.message };

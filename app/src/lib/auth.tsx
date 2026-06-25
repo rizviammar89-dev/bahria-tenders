@@ -214,6 +214,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (next === 'provider' && !providerActive) return; // can't enter provider view without active access
     setMode(next);
     AsyncStorage.setItem(MODE_KEY, next).catch(() => {});
+    // Hunt visibility follows the mode: Work = visible, Hire = hidden.
+    const uid = session?.user?.id;
+    if (uid) {
+      supabase
+        .from('profiles')
+        .update({ in_hire_mode: next === 'resident' })
+        .eq('id', uid)
+        .then(
+          () => {},
+          () => {},
+        );
+    }
   };
 
   const enableProvider = async (serviceIds: string[]) => {
@@ -224,7 +236,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // and the DB trigger auto-verifies on enable (open model).
     const { error } = await supabase
       .from('profiles')
-      .update({ is_provider: true, service_ids: serviceIds })
+      .update({ is_provider: true, service_ids: serviceIds, in_hire_mode: false })
       .eq('id', uid);
     if (error) return { error: error.message };
     refreshRole(); // re-fetch isProvider
