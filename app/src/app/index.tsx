@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: Spacing.three,
   },
-  brand: { width: '100%', alignItems: 'center', marginTop: 32 },
+  brand: { width: '100%', alignItems: 'center', marginTop: 120 },
   logo: { width: '100%', height: 150 },
   hero: { alignItems: 'center', gap: Spacing.one, marginTop: -4 },
   heroTitle: { fontSize: 26, lineHeight: 32, textAlign: 'center' },
