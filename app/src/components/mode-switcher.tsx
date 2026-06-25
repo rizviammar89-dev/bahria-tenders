@@ -29,7 +29,21 @@ export function ModeSwitcher() {
   // current; if expired, it opens the paywall instead of switching.
   if (isProvider) {
     const days = daysUntil(providerAccessUntil);
-    const onWork = () => (providerActive ? switchMode('provider') : setPaywallOpen(true));
+    const onWork = () => {
+      if (role === 'provider') return; // already in Work mode
+      if (!providerActive) {
+        setPaywallOpen(true);
+        return;
+      }
+      Alert.alert(
+        'Go online as a provider?',
+        'While you’re in Work mode, residents looking for your trade can see your location on the map and contact you directly. Switch back to Hire mode anytime to hide yourself.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Go online', onPress: () => switchMode('provider') },
+        ],
+      );
+    };
     return (
       <View style={styles.wrap}>
         <View style={[styles.segment, { borderColor: Brand.primary }]}>
