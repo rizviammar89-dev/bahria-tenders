@@ -1,7 +1,7 @@
 // Two-way scheduling widget for an awarded job, used by both resident (My Jobs) and provider
 // (feed). One party proposes a day + slot; the other accepts. Re-proposing resets confirmation.
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -112,8 +112,8 @@ export function ScheduleCard({
       ) : (
         <>
           <ThemedText type="smallBold">Propose a time</ThemedText>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-            {nextDays(new Date(), 14).map((d) => {
+          <View style={styles.chipRow}>
+            {nextDays(new Date(), 4).map((d) => {
               const selected = date === d.value;
               return (
                 <Pressable
@@ -133,7 +133,7 @@ export function ScheduleCard({
                 </Pressable>
               );
             })}
-          </ScrollView>
+          </View>
           <View style={styles.chipRow}>
             {SLOTS.map((s) => {
               const selected = slot === s.value;
