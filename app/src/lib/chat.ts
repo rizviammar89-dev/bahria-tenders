@@ -4,6 +4,7 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { decode } from 'base64-arraybuffer';
 
+import { currentUserId } from '@/lib/session';
 import { supabase } from '@/lib/supabase';
 
 export type ChatMessage = {
@@ -39,8 +40,7 @@ export async function sendTextMessage(
 ): Promise<{ error: string | null }> {
   const text = body.trim();
   if (!text) return { error: null };
-  const { data: u } = await supabase.auth.getUser();
-  const uid = u.user?.id;
+  const uid = await currentUserId();
   if (!uid) return { error: 'You are not signed in.' };
   const { error } = await supabase
     .from('messages')
@@ -55,8 +55,7 @@ export async function sendVoiceMessage(
   recipientId: string,
   base64: string,
 ): Promise<{ error: string | null }> {
-  const { data: u } = await supabase.auth.getUser();
-  const uid = u.user?.id;
+  const uid = await currentUserId();
   if (!uid) return { error: 'You are not signed in.' };
   const path = `${uid}/${jobId}/${Date.now()}.m4a`;
   const { error: upErr } = await supabase.storage

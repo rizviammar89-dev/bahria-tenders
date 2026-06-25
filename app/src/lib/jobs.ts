@@ -1,6 +1,7 @@
 // Story 2.1: data layer for posting a job. All access goes through the authed client;
 // RLS (Story 1.3) enforces resident_id = auth.uid() on insert and row visibility.
 import { uploadJobPhotos, type PickedPhoto } from '@/lib/job-photos';
+import { currentUserId } from '@/lib/session';
 import { supabase } from '@/lib/supabase';
 
 export type Service = { id: string; slug: string; display_en: string; display_ur: string };
@@ -17,8 +18,7 @@ export async function fetchServices(): Promise<{ services: Service[]; error: str
 
 /** The signed-in resident's saved precinct, to prefill the form. Null if unavailable. */
 export async function fetchMyPrecinct(): Promise<string | null> {
-  const { data: userData } = await supabase.auth.getUser();
-  const uid = userData.user?.id;
+  const uid = await currentUserId();
   if (!uid) return null;
   const { data, error } = await supabase.from('profiles').select('precinct').eq('id', uid).single();
   if (error || !data) return null;
@@ -120,8 +120,7 @@ export type AwardedJob = {
 
 /** Jobs the signed-in provider has won (awarded or completed) — so they can contact the resident. */
 export async function fetchMyAwardedJobs(): Promise<{ jobs: AwardedJob[]; error: string | null }> {
-  const { data: userData } = await supabase.auth.getUser();
-  const uid = userData.user?.id;
+  const uid = await currentUserId();
   if (!uid) return { jobs: [], error: 'You are not signed in.' };
 
   const { data, error } = await supabase
@@ -154,8 +153,7 @@ export type OpenJob = {
  * A resident (or trade-less provider) gets an empty feed — benign, not an error.
  */
 export async function fetchOpenJobsForMyTrades(): Promise<{ jobs: OpenJob[]; error: string | null }> {
-  const { data: userData } = await supabase.auth.getUser();
-  const uid = userData.user?.id;
+  const uid = await currentUserId();
   if (!uid) return { jobs: [], error: 'You are not signed in.' };
 
   const { data: profile, error: profileError } = await supabase

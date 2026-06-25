@@ -1,5 +1,6 @@
 // Favorites / re-hire data layer (resident-owned). The favorites table has two FKs to profiles,
 // so the provider embed is disambiguated by the FK name (favorites_provider_id_fkey).
+import { currentUserId } from '@/lib/session';
 import { supabase } from '@/lib/supabase';
 
 export type FavoriteProvider = {
@@ -12,8 +13,7 @@ export type FavoriteProvider = {
 };
 
 export async function fetchFavorites(): Promise<{ providers: FavoriteProvider[]; error: string | null }> {
-  const { data: u } = await supabase.auth.getUser();
-  const uid = u.user?.id;
+  const uid = await currentUserId();
   if (!uid) return { providers: [], error: 'You are not signed in.' };
   const { data, error } = await supabase
     .from('favorites')
@@ -42,8 +42,7 @@ export async function fetchFavorites(): Promise<{ providers: FavoriteProvider[];
 
 /** The set of provider ids the signed-in resident has favorited (for heart state). */
 export async function fetchFavoriteIds(): Promise<Set<string>> {
-  const { data: u } = await supabase.auth.getUser();
-  const uid = u.user?.id;
+  const uid = await currentUserId();
   if (!uid) return new Set();
   const { data, error } = await supabase.from('favorites').select('provider_id').eq('resident_id', uid);
   if (error) return new Set();
@@ -51,8 +50,7 @@ export async function fetchFavoriteIds(): Promise<Set<string>> {
 }
 
 export async function addFavorite(providerId: string): Promise<{ error: string | null }> {
-  const { data: u } = await supabase.auth.getUser();
-  const uid = u.user?.id;
+  const uid = await currentUserId();
   if (!uid) return { error: 'You are not signed in.' };
   const { error } = await supabase.from('favorites').insert({ resident_id: uid, provider_id: providerId });
   // Unique-violation = already favorited → treat as success (idempotent).
@@ -61,8 +59,7 @@ export async function addFavorite(providerId: string): Promise<{ error: string |
 }
 
 export async function removeFavorite(providerId: string): Promise<{ error: string | null }> {
-  const { data: u } = await supabase.auth.getUser();
-  const uid = u.user?.id;
+  const uid = await currentUserId();
   if (!uid) return { error: 'You are not signed in.' };
   const { error } = await supabase
     .from('favorites')

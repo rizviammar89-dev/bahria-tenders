@@ -1,5 +1,6 @@
 // Story 2.4: bid submit/edit. provider_id comes from auth.uid(); RLS is the backstop
 // (verified provider, not own job, job open for insert; own bid + job open for update).
+import { currentUserId } from '@/lib/session';
 import { supabase } from '@/lib/supabase';
 
 /**
@@ -30,8 +31,7 @@ export async function submitBid(input: {
     return { error: null };
   }
 
-  const { data: userData } = await supabase.auth.getUser();
-  const uid = userData.user?.id;
+  const uid = await currentUserId();
   if (!uid) return { error: 'You are not signed in.' };
 
   const { error } = await supabase.from('bids').insert({

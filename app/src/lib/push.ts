@@ -7,6 +7,7 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
 import { Brand } from '@/constants/theme';
+import { currentUserId } from '@/lib/session';
 import { supabase } from '@/lib/supabase';
 
 export type PushResult =
@@ -67,8 +68,7 @@ export async function registerForPushAsync(): Promise<PushResult> {
 export async function savePushToken(): Promise<void> {
   const result = await registerForPushAsync();
   if (!result.ok) return; // e.g. emulator / permission denied — silently skip
-  const { data: userData } = await supabase.auth.getUser();
-  const uid = userData.user?.id;
+  const uid = await currentUserId();
   if (!uid) return;
   const { error } = await supabase
     .from('push_tokens')

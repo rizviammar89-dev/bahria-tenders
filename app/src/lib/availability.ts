@@ -1,5 +1,6 @@
 // Story 6.2: provider availability + location publishing data layer (Supabase). Pure helpers live
 // in ./availability-logic (jest-testable); re-exported here so call sites import from one place.
+import { currentUserId } from '@/lib/session';
 import { supabase } from '@/lib/supabase';
 
 export { availabilityIsFresh, shouldPublish } from '@/lib/availability-logic';
@@ -9,8 +10,7 @@ export async function fetchMyAvailability(): Promise<{
   isAvailable: boolean;
   updatedAt: string | null;
 }> {
-  const { data: userData } = await supabase.auth.getUser();
-  const uid = userData.user?.id;
+  const uid = await currentUserId();
   if (!uid) return { isAvailable: false, updatedAt: null };
   const { data } = await supabase
     .from('profiles')
@@ -25,8 +25,7 @@ export async function fetchMyAvailability(): Promise<{
 
 /** Toggle the signed-in provider's availability (stamps the heartbeat). */
 export async function setAvailability(on: boolean): Promise<{ error: string | null }> {
-  const { data: userData } = await supabase.auth.getUser();
-  const uid = userData.user?.id;
+  const uid = await currentUserId();
   if (!uid) return { error: 'You are not signed in.' };
   const { error } = await supabase
     .from('profiles')
@@ -37,8 +36,7 @@ export async function setAvailability(on: boolean): Promise<{ error: string | nu
 
 /** Upsert the provider's current location and refresh the availability heartbeat. */
 export async function publishLocation(lat: number, lng: number): Promise<{ error: string | null }> {
-  const { data: userData } = await supabase.auth.getUser();
-  const uid = userData.user?.id;
+  const uid = await currentUserId();
   if (!uid) return { error: 'You are not signed in.' };
   const nowIso = new Date().toISOString();
   const { error: locErr } = await supabase

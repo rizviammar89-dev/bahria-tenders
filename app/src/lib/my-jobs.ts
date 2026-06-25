@@ -1,6 +1,7 @@
 // Story 2.8: the resident's My-Jobs data layer. RLS lets a resident read their own jobs and
 // ALL bids on them; the provider embed exposes public reputation (not phone). Award + contact
 // reveal go through SECURITY DEFINER RPCs (award_job / get_job_contacts).
+import { currentUserId } from '@/lib/session';
 import { supabase } from '@/lib/supabase';
 
 export type BidWithProvider = {
@@ -43,8 +44,7 @@ export type JobContacts = {
 
 /** The resident's own jobs with the bids on each (bids in arrival order — NOT cheapest-first, FR-9). */
 export async function fetchMyJobs(): Promise<{ jobs: MyJob[]; error: string | null }> {
-  const { data: userData } = await supabase.auth.getUser();
-  const uid = userData.user?.id;
+  const uid = await currentUserId();
   if (!uid) return { jobs: [], error: 'You are not signed in.' };
 
   const { data, error } = await supabase
@@ -100,8 +100,7 @@ export async function submitRating(args: {
   stars: number;
   review?: string;
 }): Promise<{ error: string | null }> {
-  const { data: userData } = await supabase.auth.getUser();
-  const uid = userData.user?.id;
+  const uid = await currentUserId();
   if (!uid) return { error: 'You are not signed in.' };
   const { error } = await supabase.from('ratings').insert({
     job_id: args.jobId,
