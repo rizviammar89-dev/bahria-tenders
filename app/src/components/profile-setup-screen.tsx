@@ -23,6 +23,7 @@ const TRADE_ICON: Record<string, IconName> = {
   electrician: 'flash',
   mason: 'wall',
   painter: 'format-paint',
+  aluminium_glass: 'window-closed-variant',
 };
 
 export function ProfileSetupScreen() {
