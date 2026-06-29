@@ -25,6 +25,7 @@ const TRADE_ICON: Record<string, IconName> = {
   painter: 'format-paint',
   aluminium_glass: 'window-closed-variant',
   fumigation: 'spray',
+  welding: 'fence',
 };
 
 export function ProfileSetupScreen() {
