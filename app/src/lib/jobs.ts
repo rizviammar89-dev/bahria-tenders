@@ -116,6 +116,7 @@ export type AwardedJob = {
   schedule_proposed_by: string | null;
   schedule_confirmed: boolean;
   service: { display_en: string; display_ur: string } | null;
+  ratedResident: boolean; // has the provider already reviewed the resident for this job?
 };
 
 /** Jobs the signed-in provider has won (awarded or completed) — so they can contact the resident. */
@@ -130,7 +131,40 @@ export async function fetchMyAwardedJobs(): Promise<{ jobs: AwardedJob[]; error:
     .in('status', ['awarded', 'completed'])
     .order('created_at', { ascending: false });
   if (error) return { jobs: [], error: error.message };
-  return { jobs: (data ?? []) as unknown as AwardedJob[], error: null };
+  const rows = (data ?? []) as unknown as Omit<AwardedJob, 'ratedResident'>[];
+
+  // Which of these jobs the provider has already reviewed the resident on (write-once).
+  let ratedJobIds = new Set<string>();
+  if (rows.length) {
+    const { data: rated } = await supabase
+      .from('ratings')
+      .select('job_id')
+      .eq('provider_id', uid)
+      .eq('author_role', 'provider')
+      .in('job_id', rows.map((j) => j.id));
+    ratedJobIds = new Set((rated ?? []).map((r) => r.job_id as string));
+  }
+  return { jobs: rows.map((j) => ({ ...j, ratedResident: ratedJobIds.has(j.id) })), error: null };
+}
+
+/** Provider reviews the resident after a completed job (write-once; RLS validates the match). */
+export async function submitResidentRating(args: {
+  jobId: string;
+  residentId: string;
+  stars: number;
+  review?: string;
+}): Promise<{ error: string | null }> {
+  const uid = await currentUserId();
+  if (!uid) return { error: 'You are not signed in.' };
+  const { error } = await supabase.from('ratings').insert({
+    job_id: args.jobId,
+    provider_id: uid,
+    resident_id: args.residentId,
+    author_role: 'provider',
+    stars: args.stars,
+    review: args.review?.trim() || null,
+  });
+  return { error: error ? error.message : null };
 }
 
 export type OpenJob = {
@@ -145,6 +179,8 @@ export type OpenJob = {
   service: { display_en: string; display_ur: string } | null;
   // The signed-in provider's own bid on this job, if any (RLS returns only the caller's bid).
   myBid: { id: string; pricePkr: number; note: string | null } | null;
+  // The resident's reputation as a customer (two-way reviews).
+  residentRating: { sum: number; count: number };
 };
 
 /**
@@ -171,18 +207,25 @@ export async function fetchOpenJobsForMyTrades(): Promise<{ jobs: OpenJob[]; err
 
   const { data, error } = await supabase
     .from('jobs')
-    .select('id, description, precinct, resident_id, preferred_date, preferred_slot, photo_paths, created_at, service:services(display_en, display_ur), bids!bids_job_id_fkey(id, price_pkr, note)')
+    .select('id, description, precinct, resident_id, preferred_date, preferred_slot, photo_paths, created_at, service:services(display_en, display_ur), resident:profiles!jobs_resident_id_fkey(resident_rating_sum, resident_rating_count), bids!bids_job_id_fkey(id, price_pkr, note)')
     .eq('status', 'open')
     .in('service_id', profile.service_ids as string[])
     .neq('resident_id', uid)
     .order('created_at', { ascending: false });
   if (error) return { jobs: [], error: error.message };
 
-  type Row = Omit<OpenJob, 'myBid'> & { bids: { id: string; price_pkr: number; note: string | null }[] };
-  const jobs: OpenJob[] = ((data ?? []) as unknown as Row[]).map(({ bids, ...job }) => {
+  type Row = Omit<OpenJob, 'myBid' | 'residentRating'> & {
+    bids: { id: string; price_pkr: number; note: string | null }[];
+    resident: { resident_rating_sum: number; resident_rating_count: number } | null;
+  };
+  const jobs: OpenJob[] = ((data ?? []) as unknown as Row[]).map(({ bids, resident, ...job }) => {
     // RLS limits the bids embed to the caller's own bid → 0 or 1 row.
     const b = bids?.[0];
-    return { ...job, myBid: b ? { id: b.id, pricePkr: b.price_pkr, note: b.note } : null };
+    return {
+      ...job,
+      myBid: b ? { id: b.id, pricePkr: b.price_pkr, note: b.note } : null,
+      residentRating: { sum: resident?.resident_rating_sum ?? 0, count: resident?.resident_rating_count ?? 0 },
+    };
   });
   return { jobs, error: null };
 }

@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BidModal } from '@/components/bid-modal';
 import { ChatModal, type ChatThread } from '@/components/chat-modal';
+import { RateResidentCard } from '@/components/rate-resident-card';
 import { ScheduleCard } from '@/components/schedule-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -260,6 +261,14 @@ export default function JobsFeedScreen() {
                           onChanged={load}
                         />
                       )}
+                      {aj.status === 'completed' &&
+                        (aj.ratedResident ? (
+                          <ThemedText type="small" themeColor="textSecondary">
+                            ✓ You reviewed this resident
+                          </ThemedText>
+                        ) : (
+                          <RateResidentCard jobId={aj.id} residentId={aj.resident_id} onRated={load} />
+                        ))}
                     </ThemedView>
                   ))}
                 </ThemedView>
@@ -285,6 +294,12 @@ export default function JobsFeedScreen() {
               </ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
                 {item.precinct} · {timeAgo(item.created_at, now)}
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                👤 Resident:{' '}
+                {item.residentRating.count > 0
+                  ? `★ ${(item.residentRating.sum / item.residentRating.count).toFixed(1)} (${item.residentRating.count})`
+                  : 'New customer'}
               </ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
                 🗓 Needed: {formatSchedule(item.preferred_date, item.preferred_slot, now ? new Date(now) : new Date())}

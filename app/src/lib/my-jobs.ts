@@ -106,6 +106,7 @@ export async function submitRating(args: {
     job_id: args.jobId,
     provider_id: args.providerId,
     resident_id: uid,
+    author_role: 'resident',
     stars: args.stars,
     review: args.review?.trim() || null,
   });

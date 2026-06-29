@@ -1,7 +1,7 @@
 // Home tab: branded landing (brand mockup). Logo + hero + a role-aware Get Started CTA.
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -16,10 +16,33 @@ import { supabase } from '@/lib/supabase';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { role } = useAuth();
+  const { role, session } = useAuth();
   const isResident = role === 'resident';
   const [savedOpen, setSavedOpen] = useState(false);
   const [viewProviderId, setViewProviderId] = useState<string | null>(null);
+  const [customerRating, setCustomerRating] = useState<{ sum: number; count: number } | null>(null);
+
+  // The resident's own reputation as a customer (two-way reviews) — shown below the hero.
+  useEffect(() => {
+    const uid = session?.user?.id;
+    if (!uid || !isResident) return;
+    let active = true;
+    supabase
+      .from('profiles')
+      .select('resident_rating_sum, resident_rating_count')
+      .eq('id', uid)
+      .single()
+      .then(({ data }) => {
+        if (active && data)
+          setCustomerRating({
+            sum: (data.resident_rating_sum as number) ?? 0,
+            count: (data.resident_rating_count as number) ?? 0,
+          });
+      });
+    return () => {
+      active = false;
+    };
+  }, [session?.user?.id, isResident]);
 
   return (
     <ThemedView style={styles.container}>
@@ -56,6 +79,13 @@ export default function HomeScreen() {
               ? 'Post a job and trusted providers in your precinct will send you a price.'
               : 'See jobs near you and send your price — get hired on your work, not the lowest bid.'}
           </ThemedText>
+          {isResident && customerRating && (
+            <ThemedText type="small" themeColor="textSecondary" style={styles.heroSub}>
+              {customerRating.count > 0
+                ? `Your customer rating: ★ ${(customerRating.sum / customerRating.count).toFixed(1)} (${customerRating.count})`
+                : 'No customer reviews yet'}
+            </ThemedText>
+          )}
         </View>
 
         <Pressable
