@@ -44,12 +44,12 @@ select col_is_unique('public', 'ratings', 'job_id', 'ratings.job_id UNIQUE — o
 select col_is_unique('public', 'notification_log', 'idempotency_key', 'notification_log.idempotency_key UNIQUE');
 select col_is_unique('public', 'services', 'slug', 'services.slug UNIQUE');
 
--- ---- Seed: exactly the 6 PRD trades (AC-3) ----
-select is((select count(*) from public.services)::int, 6, 'exactly 6 services seeded');
+-- ---- Seed: the trade list (6 original PRD trades + later additions) ----
+select is((select count(*) from public.services)::int, 9, 'exactly 9 services seeded');
 select is(
   (select array_agg(slug order by slug) from public.services),
-  ARRAY['ac_technician','carpenter','electrician','mason','painter','plumber'],
-  'seeded service slugs match the 6 PRD trades');
+  ARRAY['ac_technician','aluminium_glass','carpenter','electrician','fumigation','mason','painter','plumber','welding'],
+  'seeded service slugs match the expected trades');
 
 -- ---- Fixtures for behavioral constraint checks ----
 insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at)

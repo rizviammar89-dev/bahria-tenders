@@ -233,7 +233,7 @@ reset role;
 -- ============================================================
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
-select is((select count(*) from public.services)::int, 6, 'authenticated can read the 6 services');
+select is((select count(*) from public.services)::int, 9, 'authenticated can read all services');
 select throws_ok(
   'insert into public.services (slug, display_en, display_ur) values (''x'',''X'',''X'')',
   '42501', null, 'authenticated cannot insert a service');
