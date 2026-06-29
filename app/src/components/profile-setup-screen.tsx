@@ -24,6 +24,7 @@ const TRADE_ICON: Record<string, IconName> = {
   mason: 'wall',
   painter: 'format-paint',
   aluminium_glass: 'window-closed-variant',
+  fumigation: 'spray',
 };
 
 export function ProfileSetupScreen() {

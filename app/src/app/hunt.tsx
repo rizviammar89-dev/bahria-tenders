@@ -27,6 +27,7 @@ const TRADE_ICON: Record<string, IconName> = {
   mason: 'wall',
   painter: 'format-paint',
   aluminium_glass: 'window-closed-variant',
+  fumigation: 'spray',
 };
 
 // Bahria Town Karachi-ish fallback if the resident's location isn't available.
