@@ -11,6 +11,9 @@ dist/
 supabase/.temp/
 supabase/.branches/
 
+# Claude Code local (machine-specific) settings — can hold tokens; never commit
+.claude/settings.local.json
+
 # Env & secrets — never commit; FCM V1 service-account JSON lives ONLY in EAS credentials
 .env*
 !.env.example
