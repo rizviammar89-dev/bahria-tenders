@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   scroll: { padding: Spacing.four, gap: Spacing.three },
   notice: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.one },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two, justifyContent: 'center' },
   tile: {
     width: '48%',
     borderRadius: Spacing.three,
