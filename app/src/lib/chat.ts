@@ -42,10 +42,14 @@ export async function sendTextMessage(
   if (!text) return { error: null };
   const uid = await currentUserId();
   if (!uid) return { error: 'You are not signed in.' };
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('messages')
-    .insert({ job_id: jobId, provider_id: providerId, sender_id: uid, recipient_id: recipientId, body: text });
-  return { error: error ? error.message : null };
+    .insert({ job_id: jobId, provider_id: providerId, sender_id: uid, recipient_id: recipientId, body: text })
+    .select('id')
+    .single();
+  if (error) return { error: error.message };
+  notifyRecipient(data.id);
+  return { error: null };
 }
 
 /** Upload a recorded voice note (base64) to chat-audio and post it as a message. */
@@ -62,10 +66,19 @@ export async function sendVoiceMessage(
     .from('chat-audio')
     .upload(path, decode(base64), { contentType: 'audio/m4a' });
   if (upErr) return { error: upErr.message };
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('messages')
-    .insert({ job_id: jobId, provider_id: providerId, sender_id: uid, recipient_id: recipientId, audio_path: path });
-  return { error: error ? error.message : null };
+    .insert({ job_id: jobId, provider_id: providerId, sender_id: uid, recipient_id: recipientId, audio_path: path })
+    .select('id')
+    .single();
+  if (error) return { error: error.message };
+  notifyRecipient(data.id);
+  return { error: null };
+}
+
+/** Fire-and-forget: ask the edge function to push a pop-up to the recipient (works app-closed). */
+function notifyRecipient(messageId: string): void {
+  supabase.functions.invoke('notify-message', { body: { messageId } }).catch(() => {});
 }
 
 export function chatAudioUrl(path: string): string {

@@ -9,7 +9,17 @@ import {
 } from 'expo-audio';
 import * as FileSystem from 'expo-file-system';
 import { useEffect, useRef, useState } from 'react';
-import { FlatList, Modal, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import {
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -33,6 +43,7 @@ export type ChatThread = {
 
 export function ChatModal({ thread, onClose }: { thread: ChatThread | null; onClose: () => void }) {
   const uid = useAuth().session?.user?.id ?? null;
+  const insets = useSafeAreaInsets();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
@@ -57,10 +68,10 @@ export function ChatModal({ thread, onClose }: { thread: ChatThread | null; onCl
     };
   }, [thread]);
 
-  async function onSendText() {
-    if (!thread || !text.trim() || busy) return;
+  async function onSendText(explicit?: string) {
+    const body = (explicit ?? text).trim();
+    if (!thread || !body || busy) return;
     setBusy(true);
-    const body = text.trim();
     setText('');
     const { error: e } = await sendTextMessage(thread.jobId, thread.providerId, thread.otherPartyId, body);
     if (e) setError(e);
@@ -102,9 +113,11 @@ export function ChatModal({ thread, onClose }: { thread: ChatThread | null; onCl
   }
 
   return (
-    <Modal visible={thread !== null} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <ThemedView style={styles.sheet}>
+    <Modal visible={thread !== null} animationType="slide" onRequestClose={onClose}>
+      <ThemedView style={[styles.screen, { paddingTop: insets.top }]}>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.header}>
             <ThemedText type="subtitle">{thread?.title ?? 'Chat'}</ThemedText>
             <Pressable onPress={onClose} hitSlop={8}>
@@ -165,16 +178,19 @@ export function ChatModal({ thread, onClose }: { thread: ChatThread | null; onCl
             </ThemedText>
           )}
 
-          <View style={styles.inputRow}>
+          <View style={[styles.inputRow, { paddingBottom: insets.bottom }]}>
             <TextInput
               value={text}
-              onChangeText={setText}
+              // Pressing Enter/Return sends the message instead of inserting a newline: the newline
+              // arrives as a trailing "\n" in onChangeText — strip it and send rather than keep it.
+              onChangeText={(t) => (t.endsWith('\n') ? onSendText(t.slice(0, -1)) : setText(t))}
               placeholder="Message…"
               style={styles.input}
               multiline
+              blurOnSubmit={false}
             />
             {text.trim() ? (
-              <Pressable onPress={onSendText} disabled={busy} style={styles.iconBtn}>
+              <Pressable onPress={() => onSendText()} disabled={busy} style={styles.iconBtn}>
                 <MaterialCommunityIcons name="send" size={22} color="#ffffff" />
               </Pressable>
             ) : (
@@ -190,22 +206,21 @@ export function ChatModal({ thread, onClose }: { thread: ChatThread | null; onCl
               </Pressable>
             )}
           </View>
-        </ThemedView>
-      </View>
+        </KeyboardAvoidingView>
+      </ThemedView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
-  sheet: {
-    height: '82%',
-    borderTopLeftRadius: Spacing.four,
-    borderTopRightRadius: Spacing.four,
-    padding: Spacing.four,
-    gap: Spacing.two,
+  screen: { flex: 1, paddingHorizontal: Spacing.four, gap: Spacing.two },
+  flex: { flex: 1, gap: Spacing.two },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: Spacing.two,
   },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   close: { color: Brand.primary },
   list: { paddingVertical: Spacing.two, gap: Spacing.two, flexGrow: 1 },
   empty: { textAlign: 'center', marginTop: Spacing.four },
