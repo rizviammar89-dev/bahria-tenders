@@ -6,7 +6,6 @@ import { Image } from 'expo-image';
 import { Alert, FlatList, Pressable, RefreshControl, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ChatModal, type ChatThread } from '@/components/chat-modal';
 import { ScheduleCard } from '@/components/schedule-card';
 import { ProviderProfileModal } from '@/components/provider-profile-modal';
 import { ThemedText } from '@/components/themed-text';
@@ -47,7 +46,6 @@ export default function MyJobsScreen() {
   const [completingJobId, setCompletingJobId] = useState<string | null>(null); // only this job's button disables
   const [deletingJobId, setDeletingJobId] = useState<string | null>(null); // only this job's delete disables
   const [viewProviderId, setViewProviderId] = useState<string | null>(null); // open a bidder's read-only profile
-  const [chatThread, setChatThread] = useState<ChatThread | null>(null); // open chat with a bidder
   const myUid = useAuth().session?.user?.id ?? null;
   // Visiting charge per bid, keyed `${jobId}|${providerId}` → { distanceKm, chargePkr }.
   const [charges, setCharges] = useState<Record<string, { distanceKm: number | null; chargePkr: number }>>({});
@@ -321,20 +319,6 @@ export default function MyJobsScreen() {
                                 View profile
                               </ThemedText>
                             </Pressable>
-                            <Pressable
-                              onPress={() =>
-                                setChatThread({
-                                  jobId: item.id,
-                                  providerId: bid.provider!.id,
-                                  otherPartyId: bid.provider!.id,
-                                  title: bid.provider!.full_name,
-                                })
-                              }
-                              hitSlop={6}>
-                              <ThemedText type="small" style={styles.providerLink}>
-                                Chat
-                              </ThemedText>
-                            </Pressable>
                           </View>
                         )}
                         {(() => {
@@ -491,7 +475,6 @@ export default function MyJobsScreen() {
           providerId={viewProviderId}
           onClose={() => setViewProviderId(null)}
         />
-        <ChatModal thread={chatThread} onClose={() => setChatThread(null)} />
       </SafeAreaView>
     </ThemedView>
   );

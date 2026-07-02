@@ -7,7 +7,6 @@ import { AppState, FlatList, Pressable, RefreshControl, StyleSheet, View } from 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BidModal } from '@/components/bid-modal';
-import { ChatModal, type ChatThread } from '@/components/chat-modal';
 import { RateResidentCard } from '@/components/rate-resident-card';
 import { ScheduleCard } from '@/components/schedule-card';
 import { ThemedText } from '@/components/themed-text';
@@ -45,7 +44,6 @@ export default function JobsFeedScreen() {
   const [confirmation, setConfirmation] = useState<string | null>(null);
   const [available, setAvailable] = useState(false); // Story 6.2: provider availability
   const [availMsg, setAvailMsg] = useState<string | null>(null);
-  const [chatThread, setChatThread] = useState<ChatThread | null>(null);
   const myUid = useAuth().session?.user?.id ?? null;
   const lastPublishRef = useRef<number | null>(null);
   const mounted = useRef(true);
@@ -233,22 +231,6 @@ export default function JobsFeedScreen() {
                             {callingJobId === aj.id ? 'Connecting…' : '📞 Call'}
                           </ThemedText>
                         </Pressable>
-                        {myUid && (
-                          <Pressable
-                            onPress={() =>
-                              setChatThread({
-                                jobId: aj.id,
-                                providerId: myUid,
-                                otherPartyId: aj.resident_id,
-                                title: 'Resident',
-                              })
-                            }
-                            style={({ pressed }) => [styles.chatButton, pressed && styles.pressed]}>
-                            <ThemedText type="default" style={styles.chatLabel}>
-                              💬 Chat
-                            </ThemedText>
-                          </Pressable>
-                        )}
                       </View>
                       {aj.status === 'awarded' && (
                         <ScheduleCard
@@ -328,22 +310,6 @@ export default function JobsFeedScreen() {
                     {item.myBid ? `Edit bid · Rs ${item.myBid.pricePkr.toLocaleString('en-US')}` : 'Place bid'}
                   </ThemedText>
                 </Pressable>
-                {item.myBid && myUid && (
-                  <Pressable
-                    onPress={() =>
-                      setChatThread({
-                        jobId: item.id,
-                        providerId: myUid,
-                        otherPartyId: item.resident_id,
-                        title: 'Resident',
-                      })
-                    }
-                    style={({ pressed }) => [styles.chatButton, pressed && styles.pressed]}>
-                    <ThemedText type="default" style={styles.chatLabel}>
-                      💬 Chat
-                    </ThemedText>
-                  </Pressable>
-                )}
               </View>
             </ThemedView>
           )}
@@ -358,7 +324,6 @@ export default function JobsFeedScreen() {
             load(); // refresh so the card flips to "Edit bid · Rs N"
           }}
         />
-        <ChatModal thread={chatThread} onClose={() => setChatThread(null)} />
       </SafeAreaView>
     </ThemedView>
   );
