@@ -227,5 +227,22 @@ export async function fetchOpenJobsForMyTrades(): Promise<{ jobs: OpenJob[]; err
       residentRating: { sum: resident?.resident_rating_sum ?? 0, count: resident?.resident_rating_count ?? 0 },
     };
   });
-  return { jobs, error: null };
+
+  // Drop jobs the provider marked "not interested" so they stay hidden across refreshes.
+  const { data: dismissed } = await supabase
+    .from('job_dismissals')
+    .select('job_id')
+    .eq('provider_id', uid);
+  const hidden = new Set((dismissed ?? []).map((d) => d.job_id as string));
+  return { jobs: jobs.filter((j) => !hidden.has(j.id)), error: null };
+}
+
+/** Provider "not interested": hide this job from the caller's feed (persisted, provider-scoped). */
+export async function dismissJob(jobId: string): Promise<{ error: string | null }> {
+  const uid = await currentUserId();
+  if (!uid) return { error: 'You are not signed in.' };
+  const { error } = await supabase
+    .from('job_dismissals')
+    .upsert({ provider_id: uid, job_id: jobId }, { onConflict: 'provider_id,job_id', ignoreDuplicates: true });
+  return { error: error ? error.message : null };
 }

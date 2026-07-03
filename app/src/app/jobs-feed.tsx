@@ -24,7 +24,7 @@ import {
 import { callNumber } from '@/lib/call';
 import { jobPhotoUrl } from '@/lib/job-photos';
 import { useAuth } from '@/lib/auth';
-import { fetchMyAwardedJobs, fetchOpenJobsForMyTrades, type AwardedJob, type OpenJob } from '@/lib/jobs';
+import { dismissJob, fetchMyAwardedJobs, fetchOpenJobsForMyTrades, type AwardedJob, type OpenJob } from '@/lib/jobs';
 import { getCurrentPosition, requestForegroundPermission } from '@/lib/location';
 import { getJobContacts } from '@/lib/my-jobs';
 import { formatSchedule } from '@/lib/schedule';
@@ -73,6 +73,13 @@ export default function JobsFeedScreen() {
     if (error || !contacts) setAvailMsg("Couldn't get the resident's contact — please try again.");
     else callNumber(contacts.residentPhone);
     setCallingJobId(null);
+  }
+
+  // "Not interested": remove the job from this provider's feed (optimistic) and persist the dismissal
+  // so it stays hidden across refreshes.
+  async function onDismiss(jobId: string) {
+    setJobs((prev) => prev.filter((j) => j.id !== jobId));
+    await dismissJob(jobId);
   }
 
   useEffect(() => {
@@ -315,6 +322,16 @@ export default function JobsFeedScreen() {
                     {item.myBid ? `Edit bid · Rs ${item.myBid.pricePkr.toLocaleString('en-US')}` : 'Place bid'}
                   </ThemedText>
                 </Pressable>
+                {!item.myBid && (
+                  <Pressable
+                    onPress={() => onDismiss(item.id)}
+                    style={({ pressed }) => [styles.dismissButton, pressed && styles.pressed]}>
+                    <MaterialCommunityIcons name="close" size={16} color={Brand.primary} />
+                    <ThemedText type="smallBold" style={styles.dismissLabel}>
+                      Not interested
+                    </ThemedText>
+                  </Pressable>
+                )}
               </View>
             </ThemedView>
           )}
@@ -391,5 +408,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   bidButtonLabel: { color: '#ffffff' },
+  dismissButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    minHeight: 44,
+  },
+  dismissLabel: { color: Brand.primary },
   pressed: { opacity: 0.7 },
 });
