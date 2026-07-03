@@ -1,8 +1,8 @@
-// Hunt: a resident-facing map of providers, filterable by trade. Shows every provider in the
-// selected trade that has a published location; tapping a pin opens their profile to view & hire.
+// Hunt: a resident-facing full-screen map of providers, filtered by trade. A floating filter button
+// (top-left) opens a trade picker; tapping a pin opens an action card to call or view the provider.
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useCallback, useEffect, useState, type ComponentProps } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Marker, type Region } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -49,7 +49,7 @@ export default function HuntScreen() {
   const [viewProviderId, setViewProviderId] = useState<string | null>(null);
   const [selected, setSelected] = useState<AvailableProvider | null>(null); // pin tapped → action card
   const [calling, setCalling] = useState(false);
-  const [fullScreen, setFullScreen] = useState(false); // expand the map to fill the page
+  const [pickerOpen, setPickerOpen] = useState(false); // trade filter sheet
 
   async function onCall(providerId: string) {
     if (calling) return;
@@ -104,94 +104,51 @@ export default function HuntScreen() {
     if (selectedId) loadProviders(selectedId);
   }, [selectedId, loadProviders]);
 
+  const selectedService = services.find((s) => s.id === selectedId) ?? null;
+
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        {!fullScreen && (
-          <>
-            <View style={styles.header}>
-              <ThemedText type="subtitle">Hunt</ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                Find providers near you — pick a trade.
-              </ThemedText>
-            </View>
-
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.grid}>
-              {services.map((s) => {
-                const selected = s.id === selectedId;
-                return (
-                  <Pressable
-                    key={s.id}
-                    onPress={() => setSelectedId(s.id)}
-                    style={[
-                      styles.tile,
-                      {
-                        backgroundColor: selected ? Brand.primary : theme.backgroundElement,
-                        borderColor: selected ? Brand.primary : theme.backgroundSelected,
-                      },
-                    ]}>
-                    <MaterialCommunityIcons
-                      name={TRADE_ICON[s.slug] ?? 'toolbox-outline'}
-                      size={24}
-                      color={selected ? '#ffffff' : Brand.accent}
-                    />
-                    <ThemedText
-                      type="smallBold"
-                      numberOfLines={2}
-                      style={[styles.tileLabel, selected ? styles.tileSelected : undefined]}>
-                      {s.display_en}
-                    </ThemedText>
-                    <ThemedText
-                      type="small"
-                      numberOfLines={1}
-                      themeColor={selected ? undefined : 'textSecondary'}
-                      style={selected ? styles.tileSelected : undefined}>
-                      {s.display_ur}
-                    </ThemedText>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </>
+      <View style={styles.mapArea}>
+        {region ? (
+          <AppMap region={region} style={styles.map}>
+            {providers.map((p) => (
+              <Marker
+                key={p.id}
+                coordinate={{ latitude: p.lat, longitude: p.lng }}
+                title={p.fullName}
+                onPress={() => setSelected(p)}
+              />
+            ))}
+          </AppMap>
+        ) : (
+          <View style={styles.center}>
+            <ActivityIndicator color={Brand.primary} />
+          </View>
         )}
 
-        <View style={[styles.mapWrap, fullScreen && styles.mapWrapFull]}>
-          {region ? (
-            <AppMap region={region} style={styles.map}>
-              {providers.map((p) => (
-                <Marker
-                  key={p.id}
-                  coordinate={{ latitude: p.lat, longitude: p.lng }}
-                  title={p.fullName}
-                  onPress={() => setSelected(p)}
-                />
-              ))}
-            </AppMap>
-          ) : (
-            <View style={styles.center}>
-              <ActivityIndicator color={Brand.primary} />
-            </View>
-          )}
+        {/* Top overlay: trade filter + a live count. box-none lets the map pan around them. */}
+        <SafeAreaView edges={['top']} style={styles.topOverlay} pointerEvents="box-none">
           <Pressable
-            onPress={() => setFullScreen((f) => !f)}
-            style={({ pressed }) => [styles.mapToggle, pressed && styles.pressed]}>
-            <ThemedText type="smallBold" style={styles.mapToggleLabel}>
-              {fullScreen ? '✕ Close' : '⤢ Full map'}
+            onPress={() => setPickerOpen(true)}
+            style={({ pressed }) => [styles.filterBtn, pressed && styles.pressed]}>
+            <MaterialCommunityIcons name="filter-variant" size={18} color={Brand.primary} />
+            <ThemedText type="smallBold" numberOfLines={1} style={styles.filterLabel}>
+              {selectedService ? selectedService.display_en : 'Pick a trade'}
             </ThemedText>
+            <MaterialCommunityIcons name="chevron-down" size={18} color={Brand.primary} />
           </Pressable>
-        </View>
+          <ThemedText type="small" style={styles.countPill}>
+            {loading ? 'Loading…' : providers.length === 0 ? 'None nearby' : `${providers.length} nearby`}
+          </ThemedText>
+        </SafeAreaView>
 
-        {selected ? (
+        {/* Bottom overlay: the tapped provider's actions. */}
+        {selected && (
           <ThemedView type="backgroundElement" style={styles.actionCard}>
             <View style={styles.actionHeader}>
               <ThemedText type="smallBold">{selected.fullName}</ThemedText>
               <Pressable onPress={() => setSelected(null)} hitSlop={8}>
-                <ThemedText type="smallBold" style={{ color: Brand.primary }}>
-                  ✕
-                </ThemedText>
+                <MaterialCommunityIcons name="close" size={20} color={Brand.primary} />
               </Pressable>
             </View>
             <View style={styles.actionRow}>
@@ -200,7 +157,7 @@ export default function HuntScreen() {
                 disabled={calling}
                 style={({ pressed }) => [styles.callButton, pressed && styles.pressed]}>
                 <ThemedText type="default" style={styles.callLabel}>
-                  {calling ? 'Connecting…' : '📞 Call'}
+                  {calling ? 'Connecting…' : 'Call'}
                 </ThemedText>
               </Pressable>
               <Pressable
@@ -212,16 +169,68 @@ export default function HuntScreen() {
               </Pressable>
             </View>
           </ThemedView>
-        ) : (
-          <ThemedText type="small" themeColor="textSecondary" style={styles.footer}>
-            {loading
-              ? 'Loading providers…'
-              : providers.length === 0
-                ? 'No providers with a location in this trade yet.'
-                : `${providers.length} provider${providers.length === 1 ? '' : 's'} — tap a pin to call or view`}
-          </ThemedText>
         )}
-      </SafeAreaView>
+      </View>
+
+      {/* Trade picker sheet */}
+      <Modal
+        visible={pickerOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setPickerOpen(false)}>
+        <View style={styles.sheetBackdrop}>
+          <ThemedView style={styles.sheet}>
+            <View style={styles.sheetHeader}>
+              <ThemedText type="subtitle">Pick a trade</ThemedText>
+              <Pressable onPress={() => setPickerOpen(false)} hitSlop={8}>
+                <ThemedText type="smallBold" style={{ color: Brand.primary }}>
+                  Close
+                </ThemedText>
+              </Pressable>
+            </View>
+            <ScrollView contentContainerStyle={styles.sheetGrid}>
+              {services.map((s) => {
+                const sel = s.id === selectedId;
+                return (
+                  <Pressable
+                    key={s.id}
+                    onPress={() => {
+                      setSelectedId(s.id);
+                      setSelected(null);
+                      setPickerOpen(false);
+                    }}
+                    style={[
+                      styles.tile,
+                      {
+                        backgroundColor: sel ? Brand.primary : theme.backgroundElement,
+                        borderColor: sel ? Brand.primary : theme.backgroundSelected,
+                      },
+                    ]}>
+                    <MaterialCommunityIcons
+                      name={TRADE_ICON[s.slug] ?? 'toolbox-outline'}
+                      size={26}
+                      color={sel ? '#ffffff' : Brand.accent}
+                    />
+                    <ThemedText
+                      type="smallBold"
+                      numberOfLines={2}
+                      style={[styles.tileLabel, sel ? styles.tileSelected : undefined]}>
+                      {s.display_en}
+                    </ThemedText>
+                    <ThemedText
+                      type="small"
+                      numberOfLines={1}
+                      themeColor={sel ? undefined : 'textSecondary'}
+                      style={sel ? styles.tileSelected : undefined}>
+                      {s.display_ur}
+                    </ThemedText>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </ThemedView>
+        </View>
+      </Modal>
 
       <ProviderProfileModal providerId={viewProviderId} onClose={() => setViewProviderId(null)} />
     </ThemedView>
@@ -230,47 +239,59 @@ export default function HuntScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  safeArea: { flex: 1 },
-  header: { paddingHorizontal: Spacing.four, paddingTop: Spacing.three, gap: Spacing.one },
-  grid: {
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.two,
-    alignItems: 'center',
-  },
-  tile: {
-    width: 104,
-    borderRadius: Spacing.three,
-    borderWidth: 1,
-    paddingVertical: Spacing.three,
-    paddingHorizontal: Spacing.two,
-    minHeight: 96,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.one,
-  },
-  tileLabel: { textAlign: 'center' },
-  tileSelected: { color: '#ffffff' },
-  mapWrap: { flex: 1, marginHorizontal: Spacing.four, borderRadius: Spacing.three, overflow: 'hidden' },
-  mapWrapFull: { marginHorizontal: 0, borderRadius: 0 },
+  mapArea: { flex: 1 },
   map: { flex: 1, width: '100%', height: '100%' },
-  mapToggle: {
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  topOverlay: {
     position: 'absolute',
-    top: Spacing.two,
-    right: Spacing.two,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: Spacing.three,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: Spacing.two,
+  },
+  filterBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    backgroundColor: '#ffffff',
+    borderRadius: Spacing.four,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    marginTop: Spacing.two,
+    maxWidth: '68%',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  filterLabel: { color: Brand.ink, flexShrink: 1 },
+  countPill: {
+    marginTop: Spacing.two,
+    color: '#ffffff',
+    backgroundColor: 'rgba(31,46,36,0.88)',
     paddingVertical: Spacing.one,
     paddingHorizontal: Spacing.three,
     borderRadius: Spacing.four,
+    overflow: 'hidden',
   },
-  mapToggleLabel: { color: '#ffffff' },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  footer: { textAlign: 'center', padding: Spacing.three },
   actionCard: {
-    margin: Spacing.four,
+    position: 'absolute',
+    left: Spacing.four,
+    right: Spacing.four,
+    bottom: Spacing.four,
     padding: Spacing.three,
     borderRadius: Spacing.three,
     gap: Spacing.two,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
   },
   actionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   actionRow: { flexDirection: 'row', gap: Spacing.two },
@@ -295,5 +316,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   profileLabel: { color: Brand.primary },
+  sheetBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
+  sheet: {
+    maxHeight: '75%',
+    borderTopLeftRadius: Spacing.four,
+    borderTopRightRadius: Spacing.four,
+    padding: Spacing.four,
+    gap: Spacing.three,
+  },
+  sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  sheetGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two, justifyContent: 'center' },
+  tile: {
+    width: '48%',
+    borderRadius: Spacing.three,
+    borderWidth: 1,
+    paddingVertical: Spacing.three,
+    paddingHorizontal: Spacing.two,
+    minHeight: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.one,
+  },
+  tileLabel: { textAlign: 'center' },
+  tileSelected: { color: '#ffffff' },
   pressed: { opacity: 0.7 },
 });
