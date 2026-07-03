@@ -11,6 +11,8 @@ import { RateResidentCard } from '@/components/rate-resident-card';
 import { ScheduleCard } from '@/components/schedule-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+
 import { Brand, Spacing } from '@/constants/theme';
 import {
   availabilityIsFresh,
@@ -283,9 +285,12 @@ export default function JobsFeedScreen() {
                   ? `★ ${(item.residentRating.sum / item.residentRating.count).toFixed(1)} (${item.residentRating.count})`
                   : 'New customer'}
               </ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                🗓 Needed: {formatSchedule(item.preferred_date, item.preferred_slot, now ? new Date(now) : new Date())}
-              </ThemedText>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <MaterialCommunityIcons name="calendar-blank-outline" size={14} color="#60646C" />
+                <ThemedText type="small" themeColor="textSecondary">
+                  Needed: {formatSchedule(item.preferred_date, item.preferred_slot, now ? new Date(now) : new Date())}
+                </ThemedText>
+              </View>
               <ThemedText type="default">{item.description}</ThemedText>
               {item.photo_paths.length > 0 && (
                 <View style={styles.thumbRow}>

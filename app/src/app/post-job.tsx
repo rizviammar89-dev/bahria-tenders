@@ -214,6 +214,7 @@ export default function PostJobScreen() {
             value={description}
             onChangeText={setDescription}
             placeholder="e.g. Kitchen tap is leaking"
+            placeholderTextColor={theme.textSecondary}
             multiline
             returnKeyType="done"
             submitBehavior="blurAndSubmit"
@@ -270,6 +271,7 @@ export default function PostJobScreen() {
             value={addressUnit}
             onChangeText={setAddressUnit}
             placeholder="e.g. Villa 123 / Apartment 4B"
+            placeholderTextColor={theme.textSecondary}
             returnKeyType="done"
             style={styles.input}
           />
@@ -279,6 +281,7 @@ export default function PostJobScreen() {
             value={addressStreet}
             onChangeText={setAddressStreet}
             placeholder="e.g. Rose Street 12 / Sapphire Tower"
+            placeholderTextColor={theme.textSecondary}
             returnKeyType="done"
             style={styles.input}
           />
@@ -288,6 +291,7 @@ export default function PostJobScreen() {
             value={precinct}
             onChangeText={setPrecinct}
             placeholder="e.g. Precinct 10"
+            placeholderTextColor={theme.textSecondary}
             returnKeyType="done"
             style={styles.input}
           />

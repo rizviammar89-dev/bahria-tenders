@@ -1,8 +1,9 @@
 // Home tab: branded landing (brand mockup). Logo + hero + a role-aware Get Started CTA.
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ModeSwitcher } from '@/components/mode-switcher';
@@ -43,6 +44,13 @@ export default function HomeScreen() {
       active = false;
     };
   }, [session?.user?.id, isResident]);
+
+  function onSignOut() {
+    Alert.alert('Sign out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Sign out', style: 'destructive', onPress: () => supabase.auth.signOut() },
+    ]);
+  }
 
   return (
     <ThemedView style={styles.container}>
@@ -100,14 +108,15 @@ export default function HomeScreen() {
           <Pressable
             onPress={() => setSavedOpen(true)}
             style={({ pressed }) => [styles.saved, pressed && styles.pressed]}>
+            <MaterialCommunityIcons name="heart" size={16} color={Brand.accent} />
             <ThemedText type="smallBold" style={styles.savedLabel}>
-              ♥ Saved providers
+              Saved providers
             </ThemedText>
           </Pressable>
         )}
 
         <Pressable
-          onPress={() => supabase.auth.signOut()}
+          onPress={onSignOut}
           style={({ pressed }) => [styles.signOut, pressed && styles.pressed]}>
           <ThemedText type="small" themeColor="textSecondary">
             Sign out
@@ -167,6 +176,9 @@ const styles = StyleSheet.create({
   },
   ctaLabel: { color: '#ffffff', fontSize: 18 },
   saved: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
     paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.five,
     borderRadius: Spacing.four,
