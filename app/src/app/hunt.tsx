@@ -1,8 +1,10 @@
-// Hunt: a resident-facing full-screen map of providers, filtered by trade. A floating filter button
-// (top-left) opens a trade picker; tapping a pin opens an action card to call or view the provider.
+// Hunt: browse providers by trade. Default is a directory LIST of every provider in the selected
+// trade (always populated), with an optional live MAP toggle showing those currently online. Tap a
+// provider to view their profile; "Get a quote" posts a job for that trade, "Call" dials them.
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState, type ComponentProps } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Marker, type Region } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -14,10 +16,15 @@ import { Brand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { callNumber } from '@/lib/call';
 import { fetchServices, type Service } from '@/lib/jobs';
-import { fetchProvidersForTrade, fetchProviderPhone, type AvailableProvider } from '@/lib/live-map';
+import {
+  fetchProviderPhone,
+  fetchProvidersDirectory,
+  fetchProvidersForTrade,
+  type AvailableProvider,
+  type DirectoryProvider,
+} from '@/lib/live-map';
 import { getCurrentPosition, requestForegroundPermission } from '@/lib/location';
 
-// Trade slug → Material Community icon (mirrors the Post a Job tiles).
 type IconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
 const TRADE_ICON: Record<string, IconName> = {
   ac_technician: 'air-conditioner',
@@ -31,7 +38,6 @@ const TRADE_ICON: Record<string, IconName> = {
   welding: 'fence',
 };
 
-// Bahria Town Karachi-ish fallback if the resident's location isn't available.
 const DEFAULT_REGION: Region = {
   latitude: 24.8607,
   longitude: 67.0011,
@@ -41,42 +47,17 @@ const DEFAULT_REGION: Region = {
 
 export default function HuntScreen() {
   const theme = useTheme();
+  const router = useRouter();
   const [services, setServices] = useState<Service[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [providers, setProviders] = useState<AvailableProvider[]>([]);
-  const [region, setRegion] = useState<Region | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [directory, setDirectory] = useState<DirectoryProvider[]>([]);
+  const [loadingDir, setLoadingDir] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [viewProviderId, setViewProviderId] = useState<string | null>(null);
-  const [selected, setSelected] = useState<AvailableProvider | null>(null); // pin tapped → action card
   const [calling, setCalling] = useState(false);
-  const [pickerOpen, setPickerOpen] = useState(false); // trade filter sheet
-
-  async function onCall(providerId: string) {
-    if (calling) return;
-    setCalling(true);
-    const phone = await fetchProviderPhone(providerId);
-    setCalling(false);
-    if (phone) callNumber(phone);
-    else Alert.alert('Call', "Couldn't get this provider's number — please try again.");
-  }
-
-  // Center the map on the resident's location if permitted, else the default region.
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      const granted = await requestForegroundPermission();
-      const pos = granted ? await getCurrentPosition() : null;
-      if (!active) return;
-      setRegion(
-        pos
-          ? { latitude: pos.lat, longitude: pos.lng, latitudeDelta: 0.05, longitudeDelta: 0.05 }
-          : DEFAULT_REGION,
-      );
-    })();
-    return () => {
-      active = false;
-    };
-  }, []);
+  const [showMap, setShowMap] = useState(false);
+  const [region, setRegion] = useState<Region | null>(null);
+  const [mapProviders, setMapProviders] = useState<AvailableProvider[]>([]);
 
   // Load trades; default to the first one.
   useEffect(() => {
@@ -91,86 +72,164 @@ export default function HuntScreen() {
     };
   }, []);
 
-  const loadProviders = useCallback(async (serviceId: string) => {
-    setLoading(true);
-    const { providers: rows } = await fetchProvidersForTrade(serviceId);
-    setProviders(rows);
-    setLoading(false);
+  // Directory list for the selected trade.
+  const loadDirectory = useCallback(async (serviceId: string) => {
+    setLoadingDir(true);
+    const { providers } = await fetchProvidersDirectory(serviceId);
+    setDirectory(providers);
+    setLoadingDir(false);
   }, []);
 
   useEffect(() => {
-    // loadProviders only setStates after its await (plus a leading setLoading) — safe here.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (selectedId) loadProviders(selectedId);
-  }, [selectedId, loadProviders]);
+    if (selectedId) loadDirectory(selectedId);
+  }, [selectedId, loadDirectory]);
+
+  // Map mode: center on the resident and load the online providers as pins.
+  useEffect(() => {
+    if (!showMap || !selectedId) return;
+    let active = true;
+    (async () => {
+      if (!region) {
+        const granted = await requestForegroundPermission();
+        const pos = granted ? await getCurrentPosition() : null;
+        if (active) {
+          setRegion(
+            pos
+              ? { latitude: pos.lat, longitude: pos.lng, latitudeDelta: 0.05, longitudeDelta: 0.05 }
+              : DEFAULT_REGION,
+          );
+        }
+      }
+      const { providers } = await fetchProvidersForTrade(selectedId);
+      if (active) setMapProviders(providers);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [showMap, selectedId, region]);
+
+  async function onCall(providerId: string) {
+    if (calling) return;
+    setCalling(true);
+    const phone = await fetchProviderPhone(providerId);
+    setCalling(false);
+    if (phone) callNumber(phone);
+    else Alert.alert('Call', "Couldn't get this provider's number — please try again.");
+  }
+
+  function onQuote() {
+    if (selectedId) router.navigate({ pathname: '/post-job', params: { serviceId: selectedId } });
+  }
 
   const selectedService = services.find((s) => s.id === selectedId) ?? null;
 
   return (
     <ThemedView style={styles.container}>
-      <View style={styles.mapArea}>
-        {region ? (
-          <AppMap region={region} style={styles.map}>
-            {providers.map((p) => (
-              <Marker
-                key={p.id}
-                coordinate={{ latitude: p.lat, longitude: p.lng }}
-                title={p.fullName}
-                onPress={() => setSelected(p)}
-              />
-            ))}
-          </AppMap>
-        ) : (
-          <View style={styles.center}>
-            <ActivityIndicator color={Brand.primary} />
-          </View>
-        )}
-
-        {/* Top overlay: trade filter + a live count. box-none lets the map pan around them. */}
-        <SafeAreaView edges={['top']} style={styles.topOverlay} pointerEvents="box-none">
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <View style={styles.header}>
+          <ThemedText type="subtitle">Find a provider</ThemedText>
           <Pressable
-            onPress={() => setPickerOpen(true)}
-            style={({ pressed }) => [styles.filterBtn, pressed && styles.pressed]}>
-            <MaterialCommunityIcons name="filter-variant" size={18} color={Brand.primary} />
-            <ThemedText type="smallBold" numberOfLines={1} style={styles.filterLabel}>
-              {selectedService ? selectedService.display_en : 'Pick a trade'}
+            onPress={() => setShowMap((m) => !m)}
+            style={({ pressed }) => [styles.modeToggle, pressed && styles.pressed]}>
+            <MaterialCommunityIcons
+              name={showMap ? 'view-list' : 'map-marker-radius'}
+              size={18}
+              color={Brand.primary}
+            />
+            <ThemedText type="smallBold" style={styles.modeLabel}>
+              {showMap ? 'List' : 'Map'}
             </ThemedText>
-            <MaterialCommunityIcons name="chevron-down" size={18} color={Brand.primary} />
           </Pressable>
-          <ThemedText type="small" style={styles.countPill}>
-            {loading ? 'Loading…' : providers.length === 0 ? 'None nearby' : `${providers.length} nearby`}
-          </ThemedText>
-        </SafeAreaView>
+        </View>
 
-        {/* Bottom overlay: the tapped provider's actions. */}
-        {selected && (
-          <ThemedView type="backgroundElement" style={styles.actionCard}>
-            <View style={styles.actionHeader}>
-              <ThemedText type="smallBold">{selected.fullName}</ThemedText>
-              <Pressable onPress={() => setSelected(null)} hitSlop={8}>
-                <MaterialCommunityIcons name="close" size={20} color={Brand.primary} />
-              </Pressable>
-            </View>
-            <View style={styles.actionRow}>
-              <Pressable
-                onPress={() => onCall(selected.id)}
-                disabled={calling}
-                style={({ pressed }) => [styles.callButton, pressed && styles.pressed]}>
-                <ThemedText type="default" style={styles.callLabel}>
-                  {calling ? 'Connecting…' : 'Call'}
-                </ThemedText>
-              </Pressable>
-              <Pressable
-                onPress={() => setViewProviderId(selected.id)}
-                style={({ pressed }) => [styles.profileButton, pressed && styles.pressed]}>
-                <ThemedText type="default" style={styles.profileLabel}>
-                  View profile
-                </ThemedText>
-              </Pressable>
-            </View>
-          </ThemedView>
+        <Pressable
+          onPress={() => setPickerOpen(true)}
+          style={({ pressed }) => [styles.filterBtn, pressed && styles.pressed]}>
+          <MaterialCommunityIcons name="filter-variant" size={18} color={Brand.primary} />
+          <ThemedText type="smallBold" numberOfLines={1} style={styles.filterLabel}>
+            {selectedService ? selectedService.display_en : 'Pick a trade'}
+          </ThemedText>
+          <MaterialCommunityIcons name="chevron-down" size={18} color={Brand.primary} />
+        </Pressable>
+
+        {showMap ? (
+          <View style={styles.mapWrap}>
+            {region ? (
+              <AppMap region={region} style={styles.map}>
+                {mapProviders.map((p) => (
+                  <Marker
+                    key={p.id}
+                    coordinate={{ latitude: p.lat, longitude: p.lng }}
+                    title={p.fullName}
+                    onPress={() => setViewProviderId(p.id)}
+                  />
+                ))}
+              </AppMap>
+            ) : (
+              <View style={styles.center}>
+                <ActivityIndicator color={Brand.primary} />
+              </View>
+            )}
+            {mapProviders.length === 0 && region && (
+              <ThemedText type="small" themeColor="textSecondary" style={styles.mapHint}>
+                No providers are online right now — switch to List to browse everyone.
+              </ThemedText>
+            )}
+          </View>
+        ) : (
+          <FlatList
+            data={directory}
+            keyExtractor={(p) => p.id}
+            contentContainerStyle={styles.list}
+            ListEmptyComponent={
+              <ThemedText type="small" themeColor="textSecondary" style={styles.empty}>
+                {loadingDir ? 'Loading providers…' : 'No providers in this trade yet.'}
+              </ThemedText>
+            }
+            renderItem={({ item }) => (
+              <ThemedView type="backgroundElement" style={styles.card}>
+                <Pressable onPress={() => setViewProviderId(item.id)} style={styles.cardTop}>
+                  <View style={styles.cardInfo}>
+                    <View style={styles.nameRow}>
+                      <ThemedText type="smallBold">{item.fullName}</ThemedText>
+                      {item.online && (
+                        <ThemedText type="small" style={styles.onlineBadge}>
+                          ● Online
+                        </ThemedText>
+                      )}
+                    </View>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      {item.precinct ?? 'Area not set'} ·{' '}
+                      {item.ratingCount
+                        ? `★ ${(item.ratingSum / item.ratingCount).toFixed(1)} (${item.ratingCount})`
+                        : 'New'}
+                    </ThemedText>
+                  </View>
+                  <MaterialCommunityIcons name="chevron-right" size={22} color={theme.textSecondary} />
+                </Pressable>
+                <View style={styles.cardActions}>
+                  <Pressable
+                    onPress={onQuote}
+                    style={({ pressed }) => [styles.quoteBtn, pressed && styles.pressed]}>
+                    <ThemedText type="smallBold" style={styles.quoteLabel}>
+                      Get a quote
+                    </ThemedText>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => onCall(item.id)}
+                    disabled={calling}
+                    style={({ pressed }) => [styles.callBtn, pressed && styles.pressed]}>
+                    <ThemedText type="smallBold" style={styles.callLabel}>
+                      Call
+                    </ThemedText>
+                  </Pressable>
+                </View>
+              </ThemedView>
+            )}
+          />
         )}
-      </View>
+      </SafeAreaView>
 
       {/* Trade picker sheet */}
       <Modal
@@ -196,7 +255,6 @@ export default function HuntScreen() {
                     key={s.id}
                     onPress={() => {
                       setSelectedId(s.id);
-                      setSelected(null);
                       setPickerOpen(false);
                     }}
                     style={[
@@ -239,83 +297,81 @@ export default function HuntScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  mapArea: { flex: 1 },
-  map: { flex: 1, width: '100%', height: '100%' },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  topOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: Spacing.three,
+  safeArea: { flex: 1 },
+  header: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    gap: Spacing.two,
+    paddingHorizontal: Spacing.four,
+    paddingTop: Spacing.three,
   },
+  modeToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+    borderWidth: 1,
+    borderColor: Brand.primary,
+    borderRadius: Spacing.four,
+    paddingVertical: Spacing.one,
+    paddingHorizontal: Spacing.three,
+  },
+  modeLabel: { color: Brand.primary },
   filterBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
-    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: Brand.primary,
     borderRadius: Spacing.four,
     paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.three,
+    marginHorizontal: Spacing.four,
     marginTop: Spacing.two,
-    maxWidth: '68%',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
   },
-  filterLabel: { color: Brand.ink, flexShrink: 1 },
-  countPill: {
-    marginTop: Spacing.two,
-    color: '#ffffff',
-    backgroundColor: 'rgba(31,46,36,0.88)',
-    paddingVertical: Spacing.one,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Spacing.four,
-    overflow: 'hidden',
-  },
-  actionCard: {
-    position: 'absolute',
-    left: Spacing.four,
-    right: Spacing.four,
-    bottom: Spacing.four,
-    padding: Spacing.three,
-    borderRadius: Spacing.three,
-    gap: Spacing.two,
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-  },
-  actionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  actionRow: { flexDirection: 'row', gap: Spacing.two },
-  callButton: {
+  filterLabel: { color: Brand.ink, flex: 1 },
+  list: { padding: Spacing.four, gap: Spacing.three },
+  empty: { textAlign: 'center', padding: Spacing.four },
+  card: { borderRadius: Spacing.three, padding: Spacing.three, gap: Spacing.two },
+  cardTop: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  cardInfo: { flex: 1, gap: 2 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, flexWrap: 'wrap' },
+  onlineBadge: { color: '#1B9E5A' },
+  cardActions: { flexDirection: 'row', gap: Spacing.two },
+  quoteBtn: {
     flex: 1,
-    paddingVertical: Spacing.three,
+    backgroundColor: Brand.primary,
     borderRadius: Spacing.three,
-    backgroundColor: '#1B9E5A',
+    paddingVertical: Spacing.two,
     alignItems: 'center',
-    minHeight: 48,
     justifyContent: 'center',
+    minHeight: 44,
   },
-  callLabel: { color: '#ffffff' },
-  profileButton: {
+  quoteLabel: { color: '#ffffff' },
+  callBtn: {
     flex: 1,
-    paddingVertical: Spacing.three,
-    borderRadius: Spacing.three,
     borderWidth: 1,
     borderColor: Brand.primary,
+    borderRadius: Spacing.three,
+    paddingVertical: Spacing.two,
     alignItems: 'center',
-    minHeight: 48,
     justifyContent: 'center',
+    minHeight: 44,
   },
-  profileLabel: { color: Brand.primary },
+  callLabel: { color: Brand.primary },
+  mapWrap: { flex: 1, margin: Spacing.four, borderRadius: Spacing.three, overflow: 'hidden' },
+  map: { flex: 1, width: '100%', height: '100%' },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  mapHint: {
+    position: 'absolute',
+    bottom: Spacing.three,
+    left: Spacing.three,
+    right: Spacing.three,
+    textAlign: 'center',
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    padding: Spacing.two,
+    borderRadius: Spacing.two,
+    overflow: 'hidden',
+  },
   sheetBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
   sheet: {
     maxHeight: '75%',
