@@ -2,7 +2,7 @@
 // selected trade that has a published location; tapping a pin opens their profile to view & hire.
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useCallback, useEffect, useState, type ComponentProps } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Marker, type Region } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -116,7 +116,10 @@ export default function HuntScreen() {
               </ThemedText>
             </View>
 
-            <View style={styles.grid}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.grid}>
               {services.map((s) => {
                 const selected = s.id === selectedId;
                 return (
@@ -132,14 +135,18 @@ export default function HuntScreen() {
                     ]}>
                     <MaterialCommunityIcons
                       name={TRADE_ICON[s.slug] ?? 'toolbox-outline'}
-                      size={22}
+                      size={24}
                       color={selected ? '#ffffff' : Brand.accent}
                     />
-                    <ThemedText type="smallBold" style={selected ? styles.tileSelected : undefined}>
+                    <ThemedText
+                      type="smallBold"
+                      numberOfLines={2}
+                      style={[styles.tileLabel, selected ? styles.tileSelected : undefined]}>
                       {s.display_en}
                     </ThemedText>
                     <ThemedText
                       type="small"
+                      numberOfLines={1}
                       themeColor={selected ? undefined : 'textSecondary'}
                       style={selected ? styles.tileSelected : undefined}>
                       {s.display_ur}
@@ -147,7 +154,7 @@ export default function HuntScreen() {
                   </Pressable>
                 );
               })}
-            </View>
+            </ScrollView>
           </>
         )}
 
@@ -226,23 +233,23 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   header: { paddingHorizontal: Spacing.four, paddingTop: Spacing.three, gap: Spacing.one },
   grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: Spacing.two,
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.two,
+    alignItems: 'center',
   },
   tile: {
-    width: '48%',
+    width: 104,
     borderRadius: Spacing.three,
     borderWidth: 1,
     paddingVertical: Spacing.three,
     paddingHorizontal: Spacing.two,
-    minHeight: 84,
+    minHeight: 96,
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.one,
   },
+  tileLabel: { textAlign: 'center' },
   tileSelected: { color: '#ffffff' },
   mapWrap: { flex: 1, marginHorizontal: Spacing.four, borderRadius: Spacing.three, overflow: 'hidden' },
   mapWrapFull: { marginHorizontal: 0, borderRadius: 0 },
