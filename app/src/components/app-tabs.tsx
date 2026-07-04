@@ -1,6 +1,7 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Tabs } from 'expo-router';
 import type { ComponentProps } from 'react';
+import type { ColorValue } from 'react-native';
 
 import { Brand, Colors, MontserratFont } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -10,8 +11,8 @@ import { roleTabs } from '@/lib/role-tabs';
 type IconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
 const tabIcon =
   (name: IconName) =>
-  ({ color, size }: { color: string; size: number }) => (
-    <MaterialCommunityIcons name={name} size={size} color={color} />
+  ({ color, size }: { color: ColorValue; size: number }) => (
+    <MaterialCommunityIcons name={name} size={size} color={color as string} />
   );
 
 export default function AppTabs() {
