@@ -77,7 +77,7 @@ management / Communications where noted). You are **not** selling data and **not
 - **Users can request data deletion:** Yes — via the contact email in the privacy policy.
 
 ## 7. Store settings you'll also fill
-- **Privacy Policy URL:** [hosted privacy-policy URL — see docs/privacy-policy.md]
+- **Privacy Policy URL:** https://sites.google.com/view/bahria-tenders/home
 - **Contact email:** [your public contact email]
 - **App access:** the reviewer signs in with Google — provide **test instructions** and, since sign-in is Google-only, either a **test Google account** or note that any Google account works once the consent screen is published.
 - **Ads:** No ads → declare "No".
