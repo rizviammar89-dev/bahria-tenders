@@ -3,7 +3,7 @@
 import { useFocusEffect } from 'expo-router';
 import { Image } from 'expo-image';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { Alert, AppState, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BidModal } from '@/components/bid-modal';
@@ -24,7 +24,7 @@ import {
 import { callNumber } from '@/lib/call';
 import { jobPhotoUrl } from '@/lib/job-photos';
 import { useAuth } from '@/lib/auth';
-import { dismissJob, fetchMyAwardedJobs, fetchOpenJobsForMyTrades, type AwardedJob, type OpenJob } from '@/lib/jobs';
+import { declineJob, dismissJob, fetchMyAwardedJobs, fetchOpenJobsForMyTrades, type AwardedJob, type OpenJob } from '@/lib/jobs';
 import { getCurrentPosition, requestForegroundPermission } from '@/lib/location';
 import { useLocationConsent } from '@/lib/location-consent';
 import { getJobContacts } from '@/lib/my-jobs';
@@ -39,6 +39,7 @@ export default function JobsFeedScreen() {
   const [jobs, setJobs] = useState<OpenJob[]>([]);
   const [awardedJobs, setAwardedJobs] = useState<AwardedJob[]>([]);
   const [callingJobId, setCallingJobId] = useState<string | null>(null);
+  const [decliningJobId, setDecliningJobId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -62,7 +63,8 @@ export default function JobsFeedScreen() {
     setNow(Date.now());
     setLoadError(error ? "Couldn't load jobs — pull to refresh." : null);
     if (!error) setJobs(rows);
-    setAwardedJobs(awarded);
+    // Completed jobs linger only until the provider has reviewed the resident, then auto-hide.
+    setAwardedJobs(awarded.filter((a) => a.status !== 'completed' || !a.ratedResident));
     setLoaded(true);
   }, []);
 
@@ -82,6 +84,30 @@ export default function JobsFeedScreen() {
   async function onDismiss(jobId: string) {
     setJobs((prev) => prev.filter((j) => j.id !== jobId));
     await dismissJob(jobId);
+  }
+
+  // Back out of an awarded job → reopens it for others + notifies the resident.
+  function onDecline(jobId: string) {
+    if (decliningJobId) return;
+    Alert.alert(
+      'Decline this job?',
+      'It will be reopened for other providers and the resident will be notified. You can’t undo this.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Decline',
+          style: 'destructive',
+          onPress: async () => {
+            setDecliningJobId(jobId);
+            const { error } = await declineJob(jobId);
+            if (!mounted.current) return;
+            setDecliningJobId(null);
+            if (error) setAvailMsg(error);
+            else load();
+          },
+        },
+      ],
+    );
   }
 
   useEffect(() => {
@@ -251,15 +277,25 @@ export default function JobsFeedScreen() {
                         </Pressable>
                       </View>
                       {aj.status === 'awarded' && (
-                        <ScheduleCard
-                          jobId={aj.id}
-                          myUid={myUid}
-                          scheduledDate={aj.scheduled_date}
-                          scheduledSlot={aj.scheduled_slot}
-                          proposedBy={aj.schedule_proposed_by}
-                          confirmed={aj.schedule_confirmed}
-                          onChanged={load}
-                        />
+                        <>
+                          <ScheduleCard
+                            jobId={aj.id}
+                            myUid={myUid}
+                            scheduledDate={aj.scheduled_date}
+                            scheduledSlot={aj.scheduled_slot}
+                            proposedBy={aj.schedule_proposed_by}
+                            confirmed={aj.schedule_confirmed}
+                            onChanged={load}
+                          />
+                          <Pressable
+                            onPress={() => onDecline(aj.id)}
+                            disabled={decliningJobId !== null}
+                            style={({ pressed }) => [styles.declineButton, pressed && styles.pressed]}>
+                            <ThemedText type="smallBold" style={styles.declineLabel}>
+                              {decliningJobId === aj.id ? 'Declining…' : 'Can’t do this job'}
+                            </ThemedText>
+                          </Pressable>
+                        </>
                       )}
                       {aj.status === 'completed' &&
                         (aj.ratedResident ? (
@@ -426,5 +462,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   dismissLabel: { color: Brand.primary },
+  declineButton: { alignSelf: 'flex-start', paddingVertical: Spacing.two, minHeight: 40, justifyContent: 'center' },
+  declineLabel: { color: '#c0392b' },
   pressed: { opacity: 0.7 },
 });

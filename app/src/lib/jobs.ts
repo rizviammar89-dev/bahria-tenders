@@ -237,6 +237,14 @@ export async function fetchOpenJobsForMyTrades(): Promise<{ jobs: OpenJob[]; err
   return { jobs: jobs.filter((j) => !hidden.has(j.id)), error: null };
 }
 
+/** An awarded provider backs out: reopens the job for others + notifies the resident (server-side). */
+export async function declineJob(jobId: string): Promise<{ error: string | null }> {
+  const { data, error } = await supabase.functions.invoke('decline-job', { body: { jobId } });
+  if (error) return { error: error.message };
+  const payload = data as { ok?: boolean; error?: string };
+  return { error: payload?.ok ? null : (payload?.error ?? 'Could not decline the job.') };
+}
+
 /** Provider "not interested": hide this job from the caller's feed (persisted, provider-scoped). */
 export async function dismissJob(jobId: string): Promise<{ error: string | null }> {
   const uid = await currentUserId();
