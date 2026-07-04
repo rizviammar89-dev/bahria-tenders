@@ -24,6 +24,7 @@ import {
   type DirectoryProvider,
 } from '@/lib/live-map';
 import { getCurrentPosition, requestForegroundPermission } from '@/lib/location';
+import { useLocationConsent } from '@/lib/location-consent';
 
 type IconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
 const TRADE_ICON: Record<string, IconName> = {
@@ -48,6 +49,7 @@ const DEFAULT_REGION: Region = {
 export default function HuntScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const { requestLocationConsent } = useLocationConsent();
   const [services, setServices] = useState<Service[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [directory, setDirectory] = useState<DirectoryProvider[]>([]);
@@ -91,7 +93,8 @@ export default function HuntScreen() {
     let active = true;
     (async () => {
       if (!region) {
-        const granted = await requestForegroundPermission();
+        const consent = await requestLocationConsent('resident');
+        const granted = consent && (await requestForegroundPermission());
         const pos = granted ? await getCurrentPosition() : null;
         if (active) {
           setRegion(

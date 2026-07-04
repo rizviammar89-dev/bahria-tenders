@@ -14,6 +14,7 @@ import AppTabs from '@/components/app-tabs';
 import { LoginScreen } from '@/components/login-screen';
 import { ProfileSetupScreen } from '@/components/profile-setup-screen';
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { LocationConsentProvider } from '@/lib/location-consent';
 import { savePushToken } from '@/lib/push';
 
 // Story 1.1: show push notifications even while the app is foregrounded, so the
@@ -56,8 +57,10 @@ export default function TabLayout() {
   return (
     <ThemeProvider value={DefaultTheme}>
       <AuthProvider>
-        <AnimatedSplashOverlay />
-        <Gate />
+        <LocationConsentProvider>
+          <AnimatedSplashOverlay />
+          <Gate />
+        </LocationConsentProvider>
       </AuthProvider>
     </ThemeProvider>
   );

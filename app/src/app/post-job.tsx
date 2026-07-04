@@ -16,6 +16,7 @@ import { validateJobDraft } from '@/lib/job-draft';
 import { pickJobPhotos, type PickedPhoto } from '@/lib/job-photos';
 import { createJob, fetchMyPrecinct, fetchServices, type Service } from '@/lib/jobs';
 import { getCurrentPosition, requestForegroundPermission, reverseGeocode } from '@/lib/location';
+import { useLocationConsent } from '@/lib/location-consent';
 import { nextDays, type Slot } from '@/lib/schedule';
 
 // Map each trade slug to a Material Community icon for the tile grid.
@@ -34,6 +35,7 @@ const TRADE_ICON: Record<string, IconName> = {
 
 export default function PostJobScreen() {
   const theme = useTheme();
+  const { requestLocationConsent } = useLocationConsent();
   const myUid = useAuth().session?.user?.id ?? null;
   // Re-hire: Saved providers passes a trade to preselect (Story: favorites).
   const { serviceId: rehireServiceId } = useLocalSearchParams<{ serviceId?: string }>();
@@ -93,6 +95,13 @@ export default function PostJobScreen() {
     if (locating) return;
     setLocating(true);
     setLocationNote(null);
+    // Play prominent disclosure: explain location use BEFORE the OS prompt.
+    const consent = await requestLocationConsent('resident');
+    if (!consent) {
+      setLocationNote('Location is needed for GPS — you can still type the address below.');
+      setLocating(false);
+      return;
+    }
     const granted = await requestForegroundPermission();
     if (!granted) {
       setLocationNote('Location permission denied. Enable it in Settings to use GPS.');

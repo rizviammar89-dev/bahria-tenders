@@ -26,6 +26,7 @@ import { jobPhotoUrl } from '@/lib/job-photos';
 import { useAuth } from '@/lib/auth';
 import { dismissJob, fetchMyAwardedJobs, fetchOpenJobsForMyTrades, type AwardedJob, type OpenJob } from '@/lib/jobs';
 import { getCurrentPosition, requestForegroundPermission } from '@/lib/location';
+import { useLocationConsent } from '@/lib/location-consent';
 import { getJobContacts } from '@/lib/my-jobs';
 import { formatSchedule } from '@/lib/schedule';
 import { supabase } from '@/lib/supabase';
@@ -47,6 +48,7 @@ export default function JobsFeedScreen() {
   const [available, setAvailable] = useState(false); // Story 6.2: provider availability
   const [availMsg, setAvailMsg] = useState<string | null>(null);
   const myUid = useAuth().session?.user?.id ?? null;
+  const { requestLocationConsent } = useLocationConsent();
   const lastPublishRef = useRef<number | null>(null);
   const mounted = useRef(true);
 
@@ -128,6 +130,13 @@ export default function JobsFeedScreen() {
     const next = !available;
     setAvailMsg(null);
     if (next) {
+      // Play prominent disclosure: explain location sharing BEFORE the OS prompt.
+      const consent = await requestLocationConsent('provider');
+      if (!mounted.current) return;
+      if (!consent) {
+        setAvailMsg('Location sharing is needed to go Available.');
+        return;
+      }
       const granted = await requestForegroundPermission();
       if (!mounted.current) return;
       if (!granted) {
