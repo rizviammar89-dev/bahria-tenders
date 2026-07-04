@@ -131,12 +131,14 @@ export default function HuntScreen() {
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.header}>
-          <ThemedText type="subtitle">Find a provider</ThemedText>
+          <ThemedText type="subtitle" numberOfLines={1} style={styles.headerTitle}>
+            Find a provider
+          </ThemedText>
           <Pressable
             onPress={() => setShowMap((m) => !m)}
             style={({ pressed }) => [styles.modeToggle, pressed && styles.pressed]}>
             <MaterialCommunityIcons
-              name={showMap ? 'view-list' : 'map-marker-radius'}
+              name={showMap ? 'format-list-bulleted' : 'map-marker-radius'}
               size={18}
               color={Brand.primary}
             />
@@ -186,9 +188,24 @@ export default function HuntScreen() {
             keyExtractor={(p) => p.id}
             contentContainerStyle={styles.list}
             ListEmptyComponent={
-              <ThemedText type="small" themeColor="textSecondary" style={styles.empty}>
-                {loadingDir ? 'Loading providers…' : 'No providers in this trade yet.'}
-              </ThemedText>
+              loadingDir ? (
+                <ThemedText type="small" themeColor="textSecondary" style={styles.empty}>
+                  Loading providers…
+                </ThemedText>
+              ) : (
+                <View style={styles.emptyWrap}>
+                  <ThemedText type="small" themeColor="textSecondary" style={styles.empty}>
+                    No providers in this trade yet. Post a job and we’ll notify providers as they join.
+                  </ThemedText>
+                  <Pressable
+                    onPress={onQuote}
+                    style={({ pressed }) => [styles.emptyCta, pressed && styles.pressed]}>
+                    <ThemedText type="smallBold" style={styles.emptyCtaLabel}>
+                      Post a job for this trade
+                    </ThemedText>
+                  </Pressable>
+                </View>
+              )
             }
             renderItem={({ item }) => (
               <ThemedView type="backgroundElement" style={styles.card}>
@@ -305,17 +322,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: Spacing.two,
     paddingHorizontal: Spacing.four,
     paddingTop: Spacing.three,
   },
+  headerTitle: { fontSize: 24, lineHeight: 30, flexShrink: 1 },
   modeToggle: {
+    flexShrink: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.one,
     borderWidth: 1,
     borderColor: Brand.primary,
     borderRadius: Spacing.four,
-    paddingVertical: Spacing.one,
+    paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.three,
   },
   modeLabel: { color: Brand.primary },
@@ -333,7 +353,18 @@ const styles = StyleSheet.create({
   },
   filterLabel: { color: Brand.ink, flex: 1 },
   list: { padding: Spacing.four, gap: Spacing.three },
-  empty: { textAlign: 'center', padding: Spacing.four },
+  empty: { textAlign: 'center', paddingHorizontal: Spacing.four, paddingTop: Spacing.six },
+  emptyWrap: { alignItems: 'center', gap: Spacing.three },
+  emptyCta: {
+    borderWidth: 1,
+    borderColor: Brand.primary,
+    borderRadius: Spacing.four,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.five,
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  emptyCtaLabel: { color: Brand.primary },
   card: { borderRadius: Spacing.three, padding: Spacing.three, gap: Spacing.two },
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   cardInfo: { flex: 1, gap: 2 },
