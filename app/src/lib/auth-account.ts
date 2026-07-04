@@ -75,6 +75,24 @@ export async function signInWithGoogle(): Promise<{ error: string | null }> {
   return { error: null };
 }
 
+/** Send a login OTP to a Pakistani mobile number via SMS or WhatsApp. Returns the normalized E.164
+ *  number so the verify step uses the exact same value. */
+export async function sendPhoneOtp(
+  phone: string,
+  channel: 'sms' | 'whatsapp' = 'sms',
+): Promise<{ error: string | null; e164: string | null }> {
+  const e164 = normalizePkPhone(phone);
+  if (!e164) return { error: 'Enter a valid Pakistani mobile number (e.g. 03001234567).', e164: null };
+  const { error } = await supabase.auth.signInWithOtp({ phone: e164, options: { channel } });
+  return { error: error ? error.message : null, e164 };
+}
+
+/** Verify the OTP for `e164` (the value returned by sendPhoneOtp) → establishes the session. */
+export async function verifyPhoneOtp(e164: string, token: string): Promise<{ error: string | null }> {
+  const { error } = await supabase.auth.verifyOtp({ phone: e164, token: token.trim(), type: 'sms' });
+  return { error: error ? error.message : null };
+}
+
 /** For a freshly signed-in user with no profile: create their profile (phone is TYPED here).
  *  `userId` comes from the caller's live session — we deliberately avoid supabase.auth.getUser()
  *  here because that auth call can deadlock on the client's internal lock in React Native. */
