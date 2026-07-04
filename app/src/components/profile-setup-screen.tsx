@@ -129,7 +129,9 @@ export function ProfileSetupScreen() {
           />
           {verifiedPhone && (
             <ThemedText type="small" themeColor="textSecondary">
-              ✓ Verified — this is the number residents will call.
+              ✓ Verified — {role === 'provider'
+                ? 'residents will call this number to hire you.'
+                : 'providers will call this number to reach you.'}
             </ThemedText>
           )}
 
