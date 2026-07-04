@@ -7,6 +7,7 @@ import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { EditProfileModal } from '@/components/edit-profile-modal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Brand, Spacing } from '@/constants/theme';
@@ -36,6 +37,7 @@ export default function ProfileScreen() {
   const [busy, setBusy] = useState(false); // avatar/work upload in flight
   const [message, setMessage] = useState<string | null>(null);
   const [now, setNow] = useState(0);
+  const [editOpen, setEditOpen] = useState(false);
   const mounted = useRef(true);
 
   const load = useCallback(async () => {
@@ -162,6 +164,11 @@ export default function ProfileScreen() {
                       ratingSum: profile.ratingSum,
                     })}
                   </ThemedText>
+                  <Pressable onPress={() => setEditOpen(true)} hitSlop={6}>
+                    <ThemedText type="smallBold" style={{ color: Brand.primary }}>
+                      Edit profile
+                    </ThemedText>
+                  </Pressable>
                 </View>
               </ThemedView>
 
@@ -225,6 +232,13 @@ export default function ProfileScreen() {
           )}
         </ScrollView>
       </SafeAreaView>
+      <EditProfileModal
+        visible={editOpen}
+        onClose={() => {
+          setEditOpen(false);
+          load(); // reflect name/trade changes without leaving the tab
+        }}
+      />
     </ThemedView>
   );
 }

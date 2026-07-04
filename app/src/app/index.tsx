@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { EditProfileModal } from '@/components/edit-profile-modal';
 import { ModeSwitcher } from '@/components/mode-switcher';
 import { ProviderProfileModal } from '@/components/provider-profile-modal';
 import { SavedProvidersModal } from '@/components/saved-providers-modal';
@@ -20,6 +21,7 @@ export default function HomeScreen() {
   const { role, session } = useAuth();
   const isResident = role === 'resident';
   const [savedOpen, setSavedOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [viewProviderId, setViewProviderId] = useState<string | null>(null);
   const [customerRating, setCustomerRating] = useState<{ sum: number; count: number } | null>(null);
 
@@ -116,6 +118,14 @@ export default function HomeScreen() {
         )}
 
         <Pressable
+          onPress={() => setEditOpen(true)}
+          style={({ pressed }) => [styles.signOut, pressed && styles.pressed]}>
+          <ThemedText type="small" themeColor="textSecondary">
+            Edit profile
+          </ThemedText>
+        </Pressable>
+
+        <Pressable
           onPress={onSignOut}
           style={({ pressed }) => [styles.signOut, pressed && styles.pressed]}>
           <ThemedText type="small" themeColor="textSecondary">
@@ -137,6 +147,7 @@ export default function HomeScreen() {
         }}
       />
       <ProviderProfileModal providerId={viewProviderId} onClose={() => setViewProviderId(null)} />
+      <EditProfileModal visible={editOpen} onClose={() => setEditOpen(false)} />
     </ThemedView>
   );
 }
