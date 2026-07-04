@@ -1,14 +1,14 @@
 # Privacy Policy — Bahria Tenders
 
-**Effective date:** 1 July 2026
-**Last updated:** 1 July 2026
+**Effective date:** 4 July 2026
+**Last updated:** 4 July 2026
 
 Bahria Tenders ("the app", "we", "us") connects residents with local service providers
 (plumbers, electricians, and other trades). This policy explains what personal data we collect,
-why, and your choices. If you have questions, contact us at **[YOUR CONTACT EMAIL]**.
+why, and your choices. If you have questions, contact us at **rizvi.ammar89@gmail.com**.
 
 ## Who we are
-Bahria Tenders is operated by **[YOUR NAME / BUSINESS NAME]**, based in Pakistan. The app is
+Bahria Tenders is operated by **Ammar Rizvi**, based in Pakistan. The app is
 available on Android.
 
 ## Information we collect
@@ -24,8 +24,6 @@ We only collect what the app needs to work:
   precise location is used to place and match jobs.
 - **Photos and camera.** If you attach a photo to a job or your provider profile, we collect the
   images you choose or capture.
-- **Microphone / voice messages.** If you record a voice message in chat, we collect that audio.
-- **Messages.** Text and voice messages you send in the app's chat between residents and providers.
 - **Payment status.** If you subscribe as a provider, we record your subscription status and
   payment records. Card/payment details are handled by our payment processor (Safepay) — **we never
   see or store your full card details.**
@@ -34,7 +32,7 @@ We only collect what the app needs to work:
 ## How we use your information
 - To create and manage your account and profile.
 - To match residents with providers and show relevant providers on a map.
-- To let residents and providers contact each other and chat about jobs.
+- To let residents and providers contact each other about a job (by phone).
 - To send notifications about jobs, bids, messages, and account activity.
 - To operate provider subscriptions and keep the service running securely.
 
@@ -43,7 +41,7 @@ We **do not sell your personal data**, and we do not use it for third-party adve
 ## How your information is shared
 - **With other users, as needed for the service:** your name, profile, trade(s), reviews, and —
   while you are Available as a provider — your location, are shown to residents. Your phone number
-  and messages are shared with the other party to a job so you can coordinate.
+  is shared with the other party to a job so you can coordinate by phone.
 - **With service providers who run our infrastructure:**
   - **Supabase** — our backend and database (stores your account, jobs, messages, and media).
   - **Google** — sign-in, maps, and push notifications (Firebase Cloud Messaging).
@@ -61,7 +59,7 @@ records (for example, payment records) by law.
 - **Permissions:** camera, photos, and microphone are only used when you choose to use those
   features, and can be revoked in your device settings.
 - **Access / deletion:** you can request a copy of your data or ask us to delete your account and
-  data by contacting **[YOUR CONTACT EMAIL]**.
+  data by contacting **rizvi.ammar89@gmail.com**.
 
 ## Children
 Bahria Tenders is not directed to children under 13, and we do not knowingly collect data from them.
@@ -71,4 +69,4 @@ We may update this policy from time to time. Material changes will be reflected 
 "Last updated" date above.
 
 ## Contact
-For any privacy questions or requests, contact us at **[YOUR CONTACT EMAIL]**.
+For any privacy questions or requests, contact us at **rizvi.ammar89@gmail.com**.
