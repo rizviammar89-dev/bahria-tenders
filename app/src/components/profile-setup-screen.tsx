@@ -12,6 +12,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
 import { completeProfile } from '@/lib/auth-account';
 import { fetchServices, type Service } from '@/lib/jobs';
+import { normalizePkPhone } from '@/lib/phone';
 import type { Role } from '@/lib/role-tabs';
 import { supabase } from '@/lib/supabase';
 
@@ -33,7 +34,11 @@ export function ProfileSetupScreen() {
   const { refreshRole, session } = useAuth();
   const [role, setRole] = useState<Exclude<Role, null>>('resident');
   const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
+  // Phone-OTP users arrive with a verified number — prefill (and lock) it. Google users type theirs.
+  const verifiedPhone = session?.user?.phone ?? null;
+  const [phone, setPhone] = useState(() =>
+    verifiedPhone ? (normalizePkPhone(verifiedPhone) ?? verifiedPhone) : '',
+  );
   const [precinct, setPrecinct] = useState('');
   const [services, setServices] = useState<Service[]>([]);
   const [serviceIds, setServiceIds] = useState<string[]>([]);
@@ -116,10 +121,17 @@ export function ProfileSetupScreen() {
             value={phone}
             onChangeText={setPhone}
             placeholder="0300 1234567"
+            placeholderTextColor="#60646C"
             keyboardType="phone-pad"
             autoComplete="tel"
-            style={styles.input}
+            editable={!verifiedPhone}
+            style={[styles.input, verifiedPhone && styles.inputLocked]}
           />
+          {verifiedPhone && (
+            <ThemedText type="small" themeColor="textSecondary">
+              ✓ Verified — this is the number residents will call.
+            </ThemedText>
+          )}
 
           <ThemedText type="smallBold">Precinct</ThemedText>
           <TextInput
@@ -211,6 +223,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     minHeight: 52,
   },
+  inputLocked: { opacity: 0.6 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   tile: {
     width: '31%',

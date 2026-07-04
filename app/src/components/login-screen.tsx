@@ -138,8 +138,8 @@ export function LoginScreen() {
               onPress={onSendCode}
               disabled={busy}
               style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
-              <ThemedText type="default" style={styles.buttonLabel}>
-                {busy ? 'Sending…' : `Send code${channel === 'whatsapp' ? ' on WhatsApp' : ''}`}
+              <ThemedText type="default" numberOfLines={1} style={styles.buttonLabel}>
+                {busy ? 'Sending…' : 'Send code'}
               </ThemedText>
             </Pressable>
             <Pressable onPress={() => setStep('choose')} hitSlop={8} style={styles.link}>
@@ -170,8 +170,8 @@ export function LoginScreen() {
               onPress={onVerify}
               disabled={busy}
               style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
-              <ThemedText type="default" style={styles.buttonLabel}>
-                {busy ? 'Verifying…' : 'Verify & continue'}
+              <ThemedText type="default" numberOfLines={1} style={styles.buttonLabel}>
+                {busy ? 'Verifying…' : 'Verify'}
               </ThemedText>
             </Pressable>
             <View style={styles.otpLinks}>
