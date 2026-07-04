@@ -11,7 +11,7 @@ import { Brand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
 import { fetchServices, type Service } from '@/lib/jobs';
-import { startSubscriptionCheckout, SUBSCRIPTION_PKR } from '@/lib/subscription';
+import { SUBSCRIPTION_PKR } from '@/lib/subscription';
 
 function daysUntil(iso: string | null): number | null {
   if (!iso) return null;
@@ -106,25 +106,8 @@ export function ModeSwitcher() {
 }
 
 function PaywallModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
-  const { refreshRole } = useAuth();
-  const [busy, setBusy] = useState(false);
-
-  async function onPay() {
-    if (busy) return;
-    setBusy(true);
-    const { error } = await startSubscriptionCheckout();
-    setBusy(false);
-    if (error) {
-      Alert.alert('Payment', error);
-      return;
-    }
-    // The webhook extends access asynchronously — refresh now and again shortly after so the UI
-    // reflects the new access once Safepay's webhook lands.
-    refreshRole();
-    setTimeout(refreshRole, 4000);
-    onClose();
-  }
-
+  // Payments aren't live yet (Safepay merchant onboarding pending), so the paywall explains that
+  // paid subscriptions are coming soon rather than launching a checkout that would fail.
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.centerBackdrop}>
@@ -133,20 +116,17 @@ function PaywallModal({ visible, onClose }: { visible: boolean; onClose: () => v
             Provider subscription
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary" style={styles.cardBody}>
-            Your free trial is over. Pay Rs {SUBSCRIPTION_PKR}/month to keep working — bidding on jobs,
-            getting job alerts, and appearing on the map. You can still hire anytime.
+            Your free trial has ended. Paid subscriptions (Rs {SUBSCRIPTION_PKR}/month) to keep
+            working are coming soon — you’ll be able to renew right here. Thanks for your patience!
           </ThemedText>
-          <Pressable
-            onPress={onPay}
-            disabled={busy}
-            style={({ pressed }) => [styles.payButton, pressed && styles.pressed]}>
+          <View style={[styles.payButton, styles.payButtonDisabled]}>
             <ThemedText type="default" style={styles.payLabel}>
-              {busy ? 'Opening…' : `Pay Rs ${SUBSCRIPTION_PKR} / month`}
+              Coming soon
             </ThemedText>
-          </Pressable>
+          </View>
           <Pressable onPress={onClose} hitSlop={8} style={styles.cardClose}>
             <ThemedText type="smallBold" style={{ color: Brand.primary }}>
-              Not now
+              Close
             </ThemedText>
           </Pressable>
         </ThemedView>
@@ -297,6 +277,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
     justifyContent: 'center',
   },
+  payButtonDisabled: { opacity: 0.5 },
   payLabel: { color: '#ffffff' },
   centerBackdrop: {
     flex: 1,
